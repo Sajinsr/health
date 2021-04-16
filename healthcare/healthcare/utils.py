@@ -90,7 +90,7 @@ def get_appointments_to_invoice(patient, company):
 			if frappe.db.get_single_value(
 				"Healthcare Settings", "enable_free_follow_ups"
 			) and frappe.db.exists("Fee Validity Reference", {"appointment": appointment.name}):
-				continue  # Skip invoicing, fee validty present
+				continue  # Skip invoicing, fee validity present
 			practitioner_charge = 0
 			income_account = None
 			service_item = None
@@ -1290,7 +1290,7 @@ def insert_observation_and_sample_collection(doc, patient, grp, sample_collectio
 				child=child if child else "",
 			)
 		else:
-			# create sample_colleciton child row for  sample_collection_reqd individual templates
+			# create sample_collection child row for  sample_collection_reqd individual templates
 			sample_collection.append(
 				"observation_sample_collection",
 				{
