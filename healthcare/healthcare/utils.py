@@ -1457,10 +1457,8 @@ def create_insurance_claim(doc, service_doctype, service, qty, billing_item):
 		insurance_claim.insurance_company = doc.insurance_company
 		insurance_claim.healthcare_service_type = service_doctype
 		insurance_claim.service_template = service
-		insurance_claim.claim_status = "Approved" if insurance_details.is_auto_approval else "Pending"
-		insurance_claim.mode_of_claim_approval = (
-			"Automatic" if insurance_details.is_auto_approval else ""
-		)
+		insurance_claim.approval_status = "Approved" if insurance_details.is_auto_approval else "Pending"
+		insurance_claim.claim_approval_mode = "Automatic" if insurance_details.is_auto_approval else ""
 		insurance_claim.claim_posting_date = nowdate()
 		insurance_claim.quantity = qty
 		insurance_claim.service_doctype = doc.doctype
@@ -1479,7 +1477,7 @@ def create_insurance_claim(doc, service_doctype, service, qty, billing_item):
 		)
 		insurance_claim.save(ignore_permissions=True)
 		insurance_claim.submit()
-		return insurance_claim.name, insurance_claim.claim_status
+		return insurance_claim.name, insurance_claim.approval_status
 	return False, False
 
 
@@ -1513,5 +1511,5 @@ def update_insurance_claim(insurance_claim, sales_invoice_name, posting_date, to
 	insurance_claim.sales_invoice_posting_date = posting_date
 	insurance_claim.billing_date = nowdate()
 	insurance_claim.billing_amount = total_amount
-	insurance_claim.claim_status = "Invoiced"
+	insurance_claim.status = "Invoiced"
 	insurance_claim.save(ignore_permissions=True)
