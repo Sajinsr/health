@@ -831,7 +831,7 @@ def send_message(doc, message):
 		if doc.get("_comments"):
 			context["comments"] = json.loads(doc.get("_comments"))
 
-		# jinja to string convertion happens here
+		# jinja to string conversion happens here
 		message = frappe.render_template(message, context)
 		number = [patient_mobile]
 		try:
