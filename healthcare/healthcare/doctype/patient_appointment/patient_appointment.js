@@ -14,6 +14,10 @@ frappe.ui.form.on('Patient Appointment', {
 			frm.set_value('appointment_time', null);
 			frm.disable_save();
 		}
+		frappe.db.get_single_value('Healthcare Settings', 'automate_appointment_invoicing')
+			.then(automate_invoicing => {
+				frm.toggle_display('insurance_subscription', automate_invoicing === 0);
+			})
 	},
 
 	refresh: function(frm) {
@@ -38,8 +42,7 @@ frappe.ui.form.on('Patient Appointment', {
 				query: 'healthcare.controllers.queries.get_healthcare_service_units',
 				filters: {
 					company: frm.doc.company,
-					inpatient_record: frm.doc.inpatient_record,
-					allow_appointments: 1,
+					inpatient_record: frm.doc.inpatient_record
 				}
 			};
 		});
@@ -52,7 +55,7 @@ frappe.ui.form.on('Patient Appointment', {
 			};
 		});
 
-		frm.set_query('service_request', function() {
+		frm.set_query('service_order', function() {
 			return {
 				filters: {
 					'patient': frm.doc.patient,
@@ -63,22 +66,46 @@ frappe.ui.form.on('Patient Appointment', {
 			};
 		});
 
-		frm.set_query('insurance_subscription', function(){
-			return{
-				filters:{
-					'patient': frm.doc.patient,
-					'docstatus': 1
-				}
-			};
-		});
-
 		frm.trigger('set_therapy_type_filter');
 
 		if (frm.is_new()) {
-			frm.page.clear_primary_action();
-			if (frm.doc.appointment_for) {
-				frm.trigger('appointment_for');
-			}
+			frm.page.set_primary_action(__('Check Availability'), function() {
+				if (!frm.doc.patient) {
+					frappe.msgprint({
+						title: __('Not Allowed'),
+						message: __('Please select Patient first'),
+						indicator: 'red'
+					});
+				} else {
+					frappe.call({
+						method: 'healthcare.healthcare.doctype.patient_appointment.patient_appointment.check_payment_fields_reqd',
+						args: { 'patient': frm.doc.patient },
+						callback: function(data) {
+							if (data.message == true) {
+								if (frm.doc.mode_of_payment && frm.doc.paid_amount) {
+									check_and_set_availability(frm);
+								}
+								if (!frm.doc.mode_of_payment) {
+									frappe.msgprint({
+										title: __('Not Allowed'),
+										message: __('Please select a Mode of Payment first'),
+										indicator: 'red'
+									});
+								}
+								if (!frm.doc.paid_amount) {
+									frappe.msgprint({
+										title: __('Not Allowed'),
+										message: __('Please set the Paid Amount first'),
+										indicator: 'red'
+									});
+								}
+							} else {
+								check_and_set_availability(frm);
+							}
+						}
+					});
+				}
+			});
 		} else {
 			frm.page.set_primary_action(__('Save'), () => frm.save());
 		}
@@ -90,7 +117,7 @@ frappe.ui.form.on('Patient Appointment', {
 			}, __('View'));
 		}
 
-		if (["Open", "Checked In", "Confirmed"].includes(frm.doc.status) || (frm.doc.status == "Scheduled" && !frm.doc.__islocal)) {
+		if (frm.doc.status == 'Open' || (frm.doc.status == 'Scheduled' && !frm.doc.__islocal)) {
 			frm.add_custom_button(__('Cancel'), function() {
 				update_status(frm, 'Cancelled');
 			});
@@ -124,115 +151,21 @@ frappe.ui.form.on('Patient Appointment', {
 			frm.add_custom_button(__('Vital Signs'), function() {
 				create_vital_signs(frm);
 			}, __('Create'));
-
-			if (["Open", "Scheduled"].includes(frm.doc.status)) {
-				frm.add_custom_button(__("Confirm"), function() {
-					frm.set_value("status", "Confirmed");
-					frm.save();
-				}, __("Status"));
-			}
 		}
 
-		if (!frm.doc.__islocal && ["Open", "Confirmed"].includes(frm.doc.status) && frm.doc.appointment_based_on_check_in) {
-			frm.add_custom_button(__("Check In"), () => {
-				frm.set_value("status", "Checked In");
-				frm.save();
-			});
-		}
-
-		frm.trigger("make_invoice_button");
-	},
-
-	make_invoice_button: function (frm) {
-		// add button to invoice when show_payment_popup enabled
-		if (!frm.is_new() && !frm.doc.invoiced && frm.doc.status != "Cancelled") {
-			frappe.db.get_single_value("Healthcare Settings", "show_payment_popup").then(async val => {
-				let fee_validity = (await frappe.call(
-					"healthcare.healthcare.doctype.fee_validity.fee_validity.get_fee_validity",
-					{ "appointment_name": frm.doc.name, "date": frm.doc.appointment_date , "ignore_status": true })).message;
-
-				if (val && !fee_validity.length) {
-					frm.add_custom_button(__("Make Payment"), function () {
-						make_payment(frm, val);
-					});
+		frm.set_query('insurance_subscription', function() {
+			return {
+				filters: {
+					'patient': frm.doc.patient,
+					'docstatus': 1
 				}
-			});
-        }
-	},
-
-	appointment_for: function(frm) {
-		if (frm.doc.appointment_for == 'Practitioner') {
-			if (!frm.doc.practitioner) {
-				frm.set_value('department', '');
-			}
-			frm.set_value('service_unit', '');
-			frm.trigger('set_check_availability_action');
-		} else if (frm.doc.appointment_for == 'Service Unit') {
-			frm.set_value({
-				'practitioner': '',
-				'practitioner_name': '',
-				'department': '',
-			});
-			frm.trigger('set_book_action');
-		} else if (frm.doc.appointment_for == 'Department') {
-			frm.set_value({
-				'practitioner': '',
-				'practitioner_name': '',
-				'service_unit': '',
-			});
-			frm.trigger('set_book_action');
-		} else {
-			if (frm.doc.appointment_for == 'Department') {
-				frm.set_value('service_unit', '');
-			}
-			frm.set_value({
-				'practitioner': '',
-				'practitioner_name': '',
-				'department': '',
-				'service_unit': '',
-			});
-			frm.page.clear_primary_action();
-		}
-	},
-
-	set_book_action: function(frm) {
-		frm.page.set_primary_action(__('Book'), async function() {
-			frm.enable_save();
-			await frm.save();
-			if (!frm.is_new()) {
-				await frappe.db.get_single_value("Healthcare Settings", "show_payment_popup").then(val => {
-					frappe.call({
-						method: "healthcare.healthcare.doctype.fee_validity.fee_validity.check_fee_validity",
-						args: { "appointment": frm.doc },
-						callback: (r) => {
-							if (val && !r.message && !frm.doc.invoiced) {
-								make_payment(frm, val);
-							}
-						}
-					});
-				});
-			}
-		});
-	},
-
-	set_check_availability_action: function(frm) {
-		frm.page.set_primary_action(__('Check Availability'), function() {
-			if (!frm.doc.patient) {
-				frappe.msgprint({
-					title: __('Not Allowed'),
-					message: __('Please select Patient first'),
-					indicator: 'red'
-				});
-			} else {
-				check_and_set_availability(frm);
-			}
+			};
 		});
 	},
 
 	patient: function(frm) {
 		if (frm.doc.patient) {
 			frm.trigger('toggle_payment_fields');
-			frm.trigger('appointment_for');
 			frappe.call({
 				method: 'frappe.client.get',
 				args: {
@@ -263,36 +196,24 @@ frappe.ui.form.on('Patient Appointment', {
 
 	appointment_type: function(frm) {
 		if (frm.doc.appointment_type) {
-			if (frm.doc.appointment_for && frm.doc[frappe.scrub(frm.doc.appointment_for)]) {
-				frm.events.set_payment_details(frm);
-			}
-		}
-	},
-
-	department: function(frm) {
-		if (frm.doc.department && frm.doc.appointment_for == 'Department') {
-			frm.events.set_payment_details(frm);
-		}
-	},
-
-	service_unit: function(frm) {
-		if (frm.doc.service_unit && frm.doc.appointment_for == 'Service Unit') {
 			frm.events.set_payment_details(frm);
 		}
 	},
 
 	set_payment_details: function(frm) {
-		frappe.db.get_single_value('Healthcare Settings', 'show_payment_popup').then(val => {
+		frappe.db.get_single_value('Healthcare Settings', 'automate_appointment_invoicing').then(val => {
 			if (val) {
 				frappe.call({
-					method: 'healthcare.healthcare.utils.get_appointment_billing_item_and_rate',
+					method: 'healthcare.healthcare.utils.get_service_item_and_practitioner_charge',
 					args: {
 						doc: frm.doc
 					},
 					callback: function(data) {
 						if (data.message) {
-							frappe.model.set_value(frm.doctype, frm.docname, 'paid_amount', data.message.practitioner_charge);
-							frappe.model.set_value(frm.doctype, frm.docname, 'billing_item', data.message.service_item);
+							frm.set_value({
+								'paid_amount': data.message.practitioner_charge,
+								'billing_item': data.message.service_item
+							});
 						}
 					}
 				});
@@ -334,28 +255,31 @@ frappe.ui.form.on('Patient Appointment', {
 
 	toggle_payment_fields: function(frm) {
 		frappe.call({
-			method: 'healthcare.healthcare.doctype.patient_appointment.patient_appointment.check_payment_reqd',
+			method: 'healthcare.healthcare.doctype.patient_appointment.patient_appointment.check_payment_fields_reqd',
 			args: { 'patient': frm.doc.patient },
 			callback: function(data) {
 				if (data.message.fee_validity) {
-					// if fee validity exists and show payment popup is enabled,
+					// if fee validity exists and automated appointment invoicing is enabled,
 					// show payment fields as non-mandatory
 					frm.toggle_display('mode_of_payment', 0);
 					frm.toggle_display('paid_amount', 0);
 					frm.toggle_display('billing_item', 0);
+					frm.toggle_reqd('mode_of_payment', 0);
 					frm.toggle_reqd('paid_amount', 0);
 					frm.toggle_reqd('billing_item', 0);
 				} else if (data.message) {
 					frm.toggle_display('mode_of_payment', 1);
 					frm.toggle_display('paid_amount', 1);
 					frm.toggle_display('billing_item', 1);
+					frm.toggle_reqd('mode_of_payment', 1);
 					frm.toggle_reqd('paid_amount', 1);
 					frm.toggle_reqd('billing_item', 1);
 				} else {
-					// if show payment popup is disabled, hide fields
+					// if automated appointment invoicing is disabled, hide fields
 					frm.toggle_display('mode_of_payment', data.message ? 1 : 0);
 					frm.toggle_display('paid_amount', data.message ? 1 : 0);
 					frm.toggle_display('billing_item', data.message ? 1 : 0);
+					frm.toggle_reqd('mode_of_payment', data.message ? 1 : 0);
 					frm.toggle_reqd('paid_amount', data.message ? 1 : 0);
 					frm.toggle_reqd('billing_item', data.message ? 1 : 0);
 				}
@@ -388,9 +312,6 @@ let check_and_set_availability = function(frm) {
 	let selected_slot = null;
 	let service_unit = null;
 	let duration = null;
-	let add_video_conferencing = null;
-	let overlap_appointments = null;
-	let appointment_based_on_check_in = false;
 
 	show_availability();
 
@@ -411,52 +332,26 @@ let check_and_set_availability = function(frm) {
 				{ fieldtype: 'Column Break' },
 				{ fieldtype: 'Link', options: 'Healthcare Practitioner', reqd: 1, fieldname: 'practitioner', label: 'Healthcare Practitioner' },
 				{ fieldtype: 'Column Break' },
-				{ fieldtype: 'Date', reqd: 1, fieldname: 'appointment_date', label: 'Date', min_date: new Date(frappe.datetime.get_today()) },
+				{ fieldtype: 'Date', reqd: 1, fieldname: 'appointment_date', label: 'Date' },
 				{ fieldtype: 'Section Break' },
-				{ fieldtype: 'HTML', fieldname: 'available_slots' },
+				{ fieldtype: 'HTML', fieldname: 'available_slots' }
+
 			],
 			primary_action_label: __('Book'),
-			primary_action: async function() {
+			primary_action: function() {
 				frm.set_value('appointment_time', selected_slot);
-				add_video_conferencing = add_video_conferencing && !d.$wrapper.find(".opt-out-check").is(":checked")
-					&& !overlap_appointments
-
-				frm.set_value('add_video_conferencing', add_video_conferencing);
 				if (!frm.doc.duration) {
 					frm.set_value('duration', duration);
 				}
-				let practitioner = frm.doc.practitioner;
-
 				frm.set_value('practitioner', d.get_value('practitioner'));
 				frm.set_value('department', d.get_value('department'));
 				frm.set_value('appointment_date', d.get_value('appointment_date'));
-				frm.set_value('appointment_based_on_check_in', appointment_based_on_check_in)
-
 				if (service_unit) {
 					frm.set_value('service_unit', service_unit);
 				}
-
 				d.hide();
 				frm.enable_save();
-				await frm.save();
-				if (!frm.is_new() && (!practitioner || practitioner == d.get_value('practitioner'))) {
-					await frappe.db.get_single_value("Healthcare Settings", "show_payment_popup").then(val => {
-						frappe.call({
-							method: "healthcare.healthcare.doctype.fee_validity.fee_validity.check_fee_validity",
-							args: { "appointment": frm.doc },
-							callback: (r) => {
-								if (val && !r.message && !frm.doc.invoiced) {
-									make_payment(frm, val);
-								} else {
-									frappe.call({
-										method: "healthcare.healthcare.doctype.patient_appointment.patient_appointment.update_fee_validity",
-										args: { "appointment": frm.doc }
-									});
-								}
-							}
-						});
-					});
-				}
+				frm.save();
 				d.get_primary_btn().attr('disabled', true);
 			}
 		});
@@ -464,23 +359,19 @@ let check_and_set_availability = function(frm) {
 		d.set_values({
 			'department': frm.doc.department,
 			'practitioner': frm.doc.practitioner,
-			'appointment_date': frm.doc.appointment_date,
+			'appointment_date': frm.doc.appointment_date
 		});
 
-		let selected_department = frm.doc.department;
-
 		d.fields_dict['department'].df.onchange = () => {
-			if (selected_department != d.get_value('department')) {
-				d.set_values({
-					'practitioner': ''
-				});
-				selected_department = d.get_value('department');
-			}
-			if (d.get_value('department')) {
+			d.set_values({
+				'practitioner': ''
+			});
+			let department = d.get_value('department');
+			if (department) {
 				d.fields_dict.practitioner.get_query = function() {
 					return {
 						filters: {
-							'department': selected_department
+							'department': department
 						}
 					};
 				};
@@ -503,7 +394,6 @@ let check_and_set_availability = function(frm) {
 				show_slots(d, fd);
 			}
 		};
-
 		d.show();
 	}
 
@@ -514,8 +404,7 @@ let check_and_set_availability = function(frm) {
 				method: 'healthcare.healthcare.doctype.patient_appointment.patient_appointment.get_availability_data',
 				args: {
 					practitioner: d.get_value('practitioner'),
-					date: d.get_value('appointment_date'),
-					appointment: frm.doc
+					date: d.get_value('appointment_date')
 				},
 				callback: (r) => {
 					let data = r.message;
@@ -523,7 +412,7 @@ let check_and_set_availability = function(frm) {
 						let $wrapper = d.fields_dict.available_slots.$wrapper;
 
 						// make buttons for each slot
-						let slot_html = get_slots(data.slot_details, data.fee_validity, d.get_value('appointment_date'));
+						let slot_html = get_slots(data.slot_details);
 
 						$wrapper
 							.css('margin-bottom', 0)
@@ -537,41 +426,7 @@ let check_and_set_availability = function(frm) {
 							$btn.addClass('btn-outline-primary');
 							selected_slot = $btn.attr('data-name');
 							service_unit = $btn.attr('data-service-unit');
-							appointment_based_on_check_in = $btn.attr('data-day-appointment');
 							duration = $btn.attr('data-duration');
-							add_video_conferencing = parseInt($btn.attr('data-tele-conf'));
-							overlap_appointments = parseInt($btn.attr('data-overlap-appointments'));
-							// show option to opt out of tele conferencing
-							if ($btn.attr('data-tele-conf') == 1) {
-								if (d.$wrapper.find(".opt-out-conf-div").length) {
-									d.$wrapper.find(".opt-out-conf-div").show();
-								} else {
-									overlap_appointments ?
-										d.footer.prepend(
-											`<div class="opt-out-conf-div ellipsis text-muted" style="vertical-align:text-bottom;">
-												<label>
-													<span class="label-area">
-													${__("Video Conferencing disabled for group consultations")}
-													</span>
-												</label>
-											</div>`
-										)
-									:
-										d.footer.prepend(
-											`<div class="opt-out-conf-div ellipsis" style="vertical-align:text-bottom;">
-											<label>
-												<input type="checkbox" class="opt-out-check"/>
-												<span class="label-area">
-												${__("Do not add Video Conferencing")}
-												</span>
-											</label>
-										</div>`
-										);
-								}
-							} else {
-								d.$wrapper.find(".opt-out-conf-div").hide();
-							}
-
 							// enable primary action 'Book'
 							d.get_primary_btn().attr('disabled', null);
 						});
@@ -589,137 +444,84 @@ let check_and_set_availability = function(frm) {
 		}
 	}
 
-	function get_slots(slot_details, fee_validity, appointment_date) {
+	function get_slots(slot_details) {
 		let slot_html = '';
 		let appointment_count = 0;
 		let disabled = false;
 		let start_str, slot_start_time, slot_end_time, interval, count, count_class, tool_tip, available_slots;
 
 		slot_details.forEach((slot_info) => {
-			slot_html += `<div class="slot-info">`;
-			if (fee_validity && fee_validity != 'Disabled') {
-				slot_html += `
-					<span style="color:green">
-					${__('Patient has fee validity till')} <b>${moment(fee_validity.valid_till).format('DD-MM-YYYY')}</b>
-					</span><br>`;
-			} else if (fee_validity != 'Disabled') {
-				slot_html += `
-					<span style="color:red">
-					${__('Patient has no fee validity')}
-					</span><br>`;
+			slot_html += `<div class="slot-info">
+				<span> <b> ${__('Practitioner Schedule:')} </b> ${slot_info.slot_name} </span><br>
+				<span> <b> ${__('Service Unit:')} </b> ${slot_info.service_unit} </span>`;
+
+			if (slot_info.service_unit_capacity) {
+				slot_html += `<br><span> <b> ${__('Maximum Capacity:')} </b> ${slot_info.service_unit_capacity} </span>`;
 			}
 
-			slot_html += `
-				<span><b>
-				${__('Practitioner Schedule: ')} </b> ${slot_info.slot_name}
-					${slot_info.tele_conf && !slot_info.allow_overlap ? '<i class="fa fa-video-camera fa-1x" aria-hidden="true"></i>' : ''}
-				</span><br>
-				<span><b> ${__('Service Unit: ')} </b> ${slot_info.service_unit}</span>`;
-				if (slot_info.service_unit_capacity) {
-					slot_html += `<br><span> <b> ${__('Maximum Capacity:')} </b> ${slot_info.service_unit_capacity} </span>`;
-				}
+			slot_html += '</div><br><br>';
 
-				slot_html += '</div><br>';
+			slot_html += slot_info.avail_slot.map(slot => {
+				appointment_count = 0;
+				disabled = false;
+				start_str = slot.from_time;
+				slot_start_time = moment(slot.from_time, 'HH:mm:ss');
+				slot_end_time = moment(slot.to_time, 'HH:mm:ss');
+				interval = (slot_end_time - slot_start_time) / 60000 | 0;
 
-				slot_html += slot_info.avail_slot.map(slot => {
-						appointment_count = 0;
-						disabled = false;
-						count_class = tool_tip = '';
-						start_str = slot.from_time;
-						slot_start_time = moment(slot.from_time, 'HH:mm:ss');
-						slot_end_time = moment(slot.to_time, 'HH:mm:ss');
-						interval = (slot_end_time - slot_start_time) / 60000 | 0;
+				// iterate in all booked appointments, update the start time and duration
+				slot_info.appointments.forEach((booked) => {
+					let booked_moment = moment(booked.appointment_time, 'HH:mm:ss');
+					let end_time = booked_moment.clone().add(booked.duration, 'minutes');
 
-						// restrict past slots based on the current time.
-						let now = moment();
-						let booked_moment = ""
-						if((now.format("YYYY-MM-DD") == appointment_date) && (slot_start_time.isBefore(now) && !slot.maximum_appointments)){
+					// Deal with 0 duration appointments
+					if (booked_moment.isSame(slot_start_time) || booked_moment.isBetween(slot_start_time, slot_end_time)) {
+						if (booked.duration == 0) {
 							disabled = true;
-						} else {
-							// iterate in all booked appointments, update the start time and duration
-							slot_info.appointments.forEach((booked) => {
-								booked_moment = moment(booked.appointment_time, 'HH:mm:ss');
-								let end_time = booked_moment.clone().add(booked.duration, 'minutes');
-
-								// to get apointment count for all day appointments
-								if (slot.maximum_appointments) {
-									if (booked.appointment_date == appointment_date) {
-										appointment_count++;
-									}
-								}
-								// Deal with 0 duration appointments
-								if (booked_moment.isSame(slot_start_time) || booked_moment.isBetween(slot_start_time, slot_end_time)) {
-									if (booked.duration == 0) {
-										disabled = true;
-										return false;
-									}
-								}
-
-								// Check for overlaps considering appointment duration
-								if (slot_info.allow_overlap != 1) {
-									if (slot_start_time.isBefore(end_time) && slot_end_time.isAfter(booked_moment)) {
-										// There is an overlap
-										disabled = true;
-										return false;
-									}
-								} else {
-									if (slot_start_time.isBefore(end_time) && slot_end_time.isAfter(booked_moment)) {
-										appointment_count++;
-									}
-									if (appointment_count >= slot_info.service_unit_capacity) {
-										// There is an overlap
-										disabled = true;
-										return false;
-									}
-								}
-							});
+							return false;
 						}
-						if (slot_info.allow_overlap == 1 && slot_info.service_unit_capacity > 1) {
-							available_slots = slot_info.service_unit_capacity - appointment_count;
-							count = `${(available_slots > 0 ? available_slots : __('Full'))}`;
-							count_class = `${(available_slots > 0 ? 'badge-success' : 'badge-danger')}`;
-							tool_tip =`${available_slots} ${__('slots available for booking')}`;
+					}
+
+					// Check for overlaps considering appointment duration
+					if (slot_info.allow_overlap != 1) {
+						if (slot_start_time.isBefore(end_time) && slot_end_time.isAfter(booked_moment)) {
+							// There is an overlap
+							disabled = true;
+							return false;
 						}
+					} else {
+						if (slot_start_time.isBefore(end_time) && slot_end_time.isAfter(booked_moment)) {
+							appointment_count++;
+						}
+						if (appointment_count >= slot_info.service_unit_capacity) {
+							// There is an overlap
+							disabled = true;
+							return false;
+						}
+					}
+				});
 
-						if (slot.maximum_appointments) {
-							if (appointment_count >= slot.maximum_appointments) {
-								disabled = true;
-							}
-							else {
-								disabled = false;
-							}
-							available_slots = slot.maximum_appointments - appointment_count;
-							count = `${(available_slots > 0 ? available_slots : __('Full'))}`;
-							count_class = `${(available_slots > 0 ? 'badge-success' : 'badge-danger')}`;
-							return `<button class="btn btn-secondary" data-name=${start_str}
-								data-service-unit="${slot_info.service_unit || ''}"
-								data-day-appointment=${1}
-								data-duration=${slot.duration}
-								${disabled ? 'disabled="disabled"' : ""}>${slot.from_time} -
-								${slot.to_time} ${slot.maximum_appointments ?
-								`<br><span class='badge ${count_class}'>${count} </span>` : ''}</button>`
-						} else {
-
-						return `
-							<button class="btn btn-secondary" data-name=${start_str}
-								data-duration=${interval}
-								data-service-unit="${slot_info.service_unit || ''}"
-								data-tele-conf="${slot_info.tele_conf || 0}"
-								data-overlap-appointments="${slot_info.service_unit_capacity || 0}"
-								style="margin: 0 10px 10px 0; width: auto;" ${disabled ? 'disabled="disabled"' : ""}
-								data-toggle="tooltip" title="${tool_tip || ''}">
-								${start_str.substring(0, start_str.length - 3)}
-								${slot_info.service_unit_capacity ? `<br><span class='badge ${count_class}'> ${count} </span>` : ''}
-							</button>`;
-
+				if (slot_info.allow_overlap == 1 && slot_info.service_unit_capacity > 1) {
+					available_slots = slot_info.service_unit_capacity - appointment_count;
+					count = `${(available_slots > 0 ? available_slots : __('Full'))}`;
+					count_class = `${(available_slots > 0 ? 'badge-success' : 'badge-danger')}`;
+					tool_tip =`${available_slots} ${__('slots available for booking')}`;
 				}
+				return `
+					<button class="btn btn-secondary" data-name=${start_str}
+						data-duration=${interval}
+						data-service-unit="${slot_info.service_unit || ''}"
+						style="margin: 0 10px 10px 0; width: auto;" ${disabled ? 'disabled="disabled"' : ""}
+						data-toggle="tooltip" title="${tool_tip}">
+						${start_str.substring(0, start_str.length - 3)}<br>
+						<span class='badge ${count_class}'> ${count} </span>
+					</button>`;
 			}).join("");
 
-				if (slot_info.service_unit_capacity) {
-					slot_html += `<br/><small>${__('Each slot indicates the capacity currently available for booking')}</small>`;
-				}
-				slot_html += `<br/><br/>`;
-
+			if (slot_info.service_unit_capacity) {
+				slot_html += `<br/><small>${__('Each slot indicates the capacity currently available for booking')}</small>`;
+			}
+			slot_html += `<br/><br/>`;
 		});
 
 		return slot_html;
@@ -793,7 +595,7 @@ let show_procedure_templates = function(frm, result) {
 	});
 	if (!result) {
 		let msg = __('There are no procedures prescribed for {0}', frm.doc.patient);
-		$(repl('<div class="col-xs-12" style="padding-top:20px;" >%(msg)s</div></div>', {msg: msg})).appendTo(html_field);
+		$(repl('<div class="col-xs-12" style="padding-top:20px;" >%(msg)s</div></div>', { msg: msg })).appendTo(html_field);
 	}
 	d.show();
 };
@@ -877,217 +679,6 @@ let calculate_age = function(birth) {
 	let ageMS = Date.parse(Date()) - Date.parse(birth);
 	let age = new Date();
 	age.setTime(ageMS);
-	let years =  age.getFullYear() - 1970;
+	let years = age.getFullYear() - 1970;
 	return `${years} ${__('Years(s)')} ${age.getMonth()} ${__('Month(s)')} ${age.getDate()} ${__('Day(s)')}`;
-};
-
-let make_payment = function (frm, automate_invoicing) {
-	if (automate_invoicing) {
-		make_registration (frm, automate_invoicing);
-	}
-
-	function make_registration (frm, automate_invoicing) {
-		if (automate_invoicing == true && !frm.doc.paid_amount) {
-			frappe.throw({
-				title: __("Not Allowed"),
-				message: __("Please set the Paid Amount first"),
-			});
-		}
-
-		let fields = [
-			{
-				label: "Patient",
-				fieldname: "patient",
-				fieldtype: "Data",
-				read_only: true,
-			},
-			{
-				label: "Mode of Payment",
-				fieldname: "mode_of_payment",
-				fieldtype: "Link",
-				options: "Mode of Payment",
-				reqd: 1,
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: "Consultation Charge",
-				fieldname: "consultation_charge",
-				fieldtype: "Currency",
-				read_only: true,
-			},
-			{
-				label: "Total Payable",
-				fieldname: "total_payable",
-				fieldtype: "Currency",
-				read_only: true,
-			},
-			{
-				label: __("Additional Discount"),
-				fieldtype:"Section Break",
-				collapsible: 1,
-			},
-			{
-				label: "Discount Percentage",
-				fieldname: "discount_percentage",
-				fieldtype: "Percent",
-				default: 0,
-			},
-			{
-				fieldtype: "Column Break",
-			},
-			{
-				label: "Discount Amount",
-				fieldname: "discount_amount",
-				fieldtype: "Currency",
-				default: 0,
-			}
-		];
-
-		if (frm.doc.appointment_for == "Practitioner") {
-			let pract_dict = {
-				label: "Practitioner",
-				fieldname: "practitioner",
-				fieldtype: "Data",
-				read_only: true,
-			};
-			fields.splice(3, 0, pract_dict);
-		} else if (frm.doc.appointment_for == "Service Unit") {
-			let su_dict = {
-				label: "Service Unit",
-				fieldname: "service_unit",
-				fieldtype: "Data",
-				read_only: true,
-			};
-			fields.splice(3, 0, su_dict);
-		} else if (frm.doc.appointment_for == "Department") {
-			let dept_dict = {
-				label: "Department",
-				fieldname: "department",
-				fieldtype: "Data",
-				read_only: true,
-			};
-			fields.splice(3, 0, dept_dict);
-		}
-
-		if (automate_invoicing) {
-			show_payment_dialog(frm, fields);
-		}
-	}
-
-	function show_payment_dialog(frm, fields) {
-		let d = new frappe.ui.Dialog({
-			title: "Enter Payment Details",
-			fields: fields,
-			primary_action_label: "Create Invoice",
-			primary_action: async function(values) {
-				if (frm.is_dirty()) {
-					await frm.save();
-				}
-				frappe.call({
-					method: "healthcare.healthcare.doctype.patient_appointment.patient_appointment.invoice_appointment",
-					args: {
-						"appointment_name": frm.doc.name,
-						"discount_percentage": values.discount_percentage,
-						"discount_amount": values.discount_amount
-					},
-					callback: async function (data) {
-						if (!data.exc) {
-							await frm.reload_doc();
-							if (frm.doc.ref_sales_invoice) {
-								d.get_field("mode_of_payment").$input.prop("disabled", true);
-								d.get_field("discount_percentage").$input.prop("disabled", true);
-								d.get_field("discount_amount").$input.prop("disabled", true);
-								d.get_primary_btn().attr("disabled", true);
-								d.get_secondary_btn().attr("disabled", false);
-							}
-						}
-					}
-				});
-			},
-			secondary_action_label: __(`<svg class="icon  icon-sm" style="">
-				<use class="" href="#icon-printer"></use>
-			</svg>`),
-			secondary_action() {
-				window.open("/app/print/Sales Invoice/" + frm.doc.ref_sales_invoice, "_blank");
-				d.hide();
-			}
-		});
-		d.fields_dict["mode_of_payment"].df.onchange = () => {
-			if (d.get_value("mode_of_payment")) {
-				frm.set_value("mode_of_payment", d.get_value("mode_of_payment"));
-			}
-		};
-		d.get_secondary_btn().attr("disabled", true);
-		d.set_values({
-			"patient": frm.doc.patient_name,
-			"consultation_charge": frm.doc.paid_amount,
-			"total_payable": frm.doc.paid_amount,
-		});
-
-		if (frm.doc.appointment_for == "Practitioner") {
-			d.set_value("practitioner", frm.doc.practitioner_name);
-		} else if (frm.doc.appointment_for == "Service Unit") {
-			d.set_value("service_unit", frm.doc.service_unit);
-		} else if (frm.doc.appointment_for == "Department") {
-			d.set_value("department", frm.doc.department);
-		}
-
-		if (frm.doc.mode_of_payment) {
-			d.set_value("mode_of_payment", frm.doc.mode_of_payment);
-		}
-		d.show();
-
-		d.fields_dict["discount_percentage"].df.onchange = () => validate_discount("discount_percentage");
-		d.fields_dict["discount_amount"].df.onchange = () => validate_discount("discount_amount");
-
-		function validate_discount(field) {
-			let message = "";
-			let discount_percentage = d.get_value("discount_percentage");
-			let discount_amount = d.get_value("discount_amount");
-			let consultation_charge = d.get_value("consultation_charge");
-
-			if (field === "discount_percentage") {
-				if (discount_percentage > 100 || discount_percentage < 0) {
-					d.get_primary_btn().attr("disabled", true);
-					message = "Invalid discount percentage";
-				} else {
-					d.get_primary_btn().attr("disabled", false);
-					frm.via_discount_percentage = true;
-					if (discount_percentage && discount_amount) {
-						d.set_value("discount_amount", 0);
-					}
-					discount_amount = consultation_charge * (discount_percentage / 100);
-
-					d.set_values({
-						"discount_amount": discount_amount,
-						"total_payable": consultation_charge - discount_amount,
-					}).then(() => delete frm.via_discount_percentage);
-				}
-			} else if (field === "discount_amount") {
-				if (consultation_charge < discount_amount || discount_amount < 0) {
-					d.get_primary_btn().attr("disabled", true);
-					message = "Discount amount should not be more than Consultation Charge";
-				} else {
-					d.get_primary_btn().attr("disabled", false);
-					if (!frm.via_discount_percentage) {
-						discount_percentage = (discount_amount / consultation_charge) * 100;
-						d.set_values({
-							"discount_percentage": discount_percentage,
-							"total_payable": consultation_charge - discount_amount,
-						});
-					}
-				}
-			}
-			show_message(d, message, field);
-		}
-	}
-};
-
-let show_message = function(d, message, field) {
-	var field = d.get_field(field);
-	field.df.description = `<div style="color:red;
-		padding:5px 5px 5px 5px">${message}</div>`
-	field.refresh();
 };
