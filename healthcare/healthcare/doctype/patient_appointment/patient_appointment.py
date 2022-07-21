@@ -14,19 +14,24 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, get_link_to_form, get_time, getdate
 
-from erpnext.hr.doctype.employee.employee import is_holiday
-
 from healthcare.healthcare.doctype.healthcare_settings.healthcare_settings import (
 	get_income_account,
 	get_receivable_account,
-)
-from healthcare.healthcare.doctype.patient_insurance_coverage.patient_insurance_coverage import (
-	make_insurance_coverage,
 )
 from healthcare.healthcare.utils import (
 	check_fee_validity,
 	get_service_item_and_practitioner_charge,
 	manage_fee_validity,
+)
+
+# todo: clean up imports
+try:
+	from erpnext.hr.doctype.employee.employee import is_holiday
+except ImportError:
+	from erpnext.setup.doctype.employee.employee import is_holiday
+
+from healthcare.healthcare.doctype.patient_insurance_coverage.patient_insurance_coverage import (
+	make_insurance_coverage,
 )
 
 
@@ -391,7 +396,7 @@ def check_sales_invoice_exists(appointment):
 @frappe.whitelist()
 def get_availability_data(date, practitioner):
 	"""
-	Get availability data of "practitioner" on "date"
+	Get availability data of 'practitioner' on 'date'
 	:param date: Date to check in schedule
 	:param practitioner: Name of the practitioner
 	:return: dict containing a list of available slots, list of appointments and time of appointments
@@ -464,7 +469,7 @@ def get_available_slots(practitioner_doc, date):
 		validate_practitioner_schedules(schedule_entry, practitioner)
 		practitioner_schedule = frappe.get_doc("Practitioner Schedule", schedule_entry.schedule)
 
-		if practitioner_schedule:
+		if practitioner_schedule and not practitioner_schedule.disabled:
 			available_slots = []
 			for time_slot in practitioner_schedule.time_slots:
 				if weekday == time_slot.day:
@@ -653,14 +658,14 @@ def get_events(start, end, filters=None):
 		`tabPatient Appointment`.name, `tabPatient Appointment`.patient,
 		`tabPatient Appointment`.practitioner, `tabPatient Appointment`.status,
 		`tabPatient Appointment`.duration,
-		timestamp(`tabPatient Appointment`.appointment_date, `tabPatient Appointment`.appointment_time) as "start",
+		timestamp(`tabPatient Appointment`.appointment_date, `tabPatient Appointment`.appointment_time) as 'start',
 		`tabAppointment Type`.color
 		from
 		`tabPatient Appointment`
 		left join `tabAppointment Type` on `tabPatient Appointment`.appointment_type=`tabAppointment Type`.name
 		where
 		(`tabPatient Appointment`.appointment_date between %(start)s and %(end)s)
-		and `tabPatient Appointment`.status != "Cancelled" and `tabPatient Appointment`.docstatus < 2 {conditions}""".format(
+		and `tabPatient Appointment`.status != 'Cancelled' and `tabPatient Appointment`.docstatus < 2 {conditions}""".format(
 			conditions=conditions
 		),
 		{"start": start, "end": end},
