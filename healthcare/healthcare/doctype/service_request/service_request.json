@@ -73,8 +73,14 @@
   "template_dt",
   "template_dn",
   "sample_collection_required",
+  "billing_and_insurance_section",
+  "billing_status",
   "qty_invoiced",
-  "billing_status"
+  "column_break_2o7uz",
+  "insurance_policy",
+  "insurance_payor",
+  "insurance_coverage",
+  "coverage_status"
  ],
  "fields": [
   {
@@ -525,6 +531,52 @@
    "fieldname": "practitioner_email",
    "fieldtype": "Data",
    "label": "Practitioner Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "billing_and_insurance_section",
+   "fieldtype": "Section Break",
+   "label": "Billing and Insurance"
+  },
+  {
+   "fieldname": "column_break_2o7uz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "insurance_policy",
+   "fieldtype": "Link",
+   "label": "Insurance Policy",
+   "options": "Patient Insurance Policy",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fetch_from": "insurance_policy.insurance_payor",
+   "fieldname": "insurance_payor",
+   "fieldtype": "Link",
+   "label": "Insurance Payor",
+   "options": "Insurance Payor",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "insurance_coverage",
+   "fieldtype": "Link",
+   "label": "Insurance Coverage",
+   "no_copy": 1,
+   "options": "Patient Insurance Coverage",
+   "read_only": 1,
+   "read_only_depends_on": "eval:doc.docstatus!=0",
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "coverage_status",
+   "fieldtype": "Data",
+   "label": "Claim Status",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

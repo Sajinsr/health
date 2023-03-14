@@ -47,6 +47,7 @@
   "sb_in_ac",
   "income_account",
   "receivable_account",
+  "naming_series_for_journal_entry",
   "order_details_section",
   "process_service_request_only_if_paid",
   "alerts_tab",
@@ -360,6 +361,11 @@
    "fieldtype": "Link",
    "label": "Default Google Calendar",
    "options": "Google Calendar"
+  },
+  {
+   "fieldname": "naming_series_for_journal_entry",
+   "fieldtype": "Select",
+   "label": "Naming Series for Insurance Coverage Journal Entry"
   },
   {
    "fieldname": "order_details_section",

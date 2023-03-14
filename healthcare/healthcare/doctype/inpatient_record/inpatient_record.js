@@ -51,6 +51,15 @@ frappe.ui.form.on('Inpatient Record', {
 			};
 		});
 
+		frm.set_query('insurance_policy', function() {
+			return {
+				filters: {
+					'patient': frm.doc.patient,
+					'docstatus': 1
+				}
+			};
+		});
+
 		if (!frm.doc.__islocal) {
 			if (frm.doc.status == 'Admitted') {
 				frm.add_custom_button(__('Schedule Discharge'), function() {
@@ -101,6 +110,11 @@ frappe.ui.form.on('Inpatient Record', {
 						}
 					})
 				});
+				if (frm.doc.insurance_policy) {
+					frm.add_custom_button(__('Create Insurance Coverage'), function() {
+						create_insurance_coverage(frm);
+					});
+				}
 			}
 
 			if (!["Discharge Scheduled", "Cancelled", "Discharged"].includes(frm.doc.status)) {
@@ -644,3 +658,12 @@ var generate_billables = function(frm) {
 		}
 	})
 }
+
+let create_insurance_coverage = function(frm) {
+	frappe.call({
+		doc: frm.doc,
+		method: 'create_insurance_coverage',
+		freeze: true,
+		freeze_message: __('Creating Insurance Coverage')
+	});
+};

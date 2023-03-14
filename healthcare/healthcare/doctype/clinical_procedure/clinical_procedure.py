@@ -53,7 +53,9 @@ class ClinicalProcedure(Document):
 
 	def on_cancel(self):
 		if self.service_request:
-			frappe.db.set_value("Service Request", self.service_request, "status", "active-Request Status")
+			frappe.db.set_value(
+				"Service Request", self.service_request, "status", "active-Request Status"
+			)
 
 	def after_insert(self):
 		if self.service_request:
@@ -79,13 +81,17 @@ class ClinicalProcedure(Document):
 	def create_nursing_tasks(self, post_event=True):
 		if post_event:
 			template = frappe.db.get_value(
-				"Clinical Procedure Template", self.procedure_template, "post_op_nursing_checklist_template"
+				"Clinical Procedure Template",
+				self.procedure_template,
+				"post_op_nursing_checklist_template",
 			)
 			start_time = now_datetime()
 
 		else:
 			template = frappe.db.get_value(
-				"Clinical Procedure Template", self.procedure_template, "pre_op_nursing_checklist_template"
+				"Clinical Procedure Template",
+				self.procedure_template,
+				"pre_op_nursing_checklist_template",
 			)
 			# pre op tasks to be created on Clinical Procedure submit, use scheduled date
 			start_time = frappe.utils.get_datetime(f"{self.start_date} {self.start_time}")
@@ -112,9 +118,9 @@ class ClinicalProcedure(Document):
 			self.status = "Cancelled"
 
 	def set_title(self):
-		self.title = _("{0} - {1}").format(self.patient_name or self.patient, self.procedure_template)[
-			:100
-		]
+		self.title = _("{0} - {1}").format(
+			self.patient_name or self.patient, self.procedure_template
+		)[:100]
 
 	@frappe.whitelist()
 	def complete_procedure(self):
@@ -145,7 +151,13 @@ class ClinicalProcedure(Document):
 						item_details = get_item_details(args)
 						item_price = item_details.price_list_rate * item.qty
 						item_consumption_details = (
-							item_details.item_name + " " + str(item.qty) + " " + item.uom + " " + str(item_price)
+							item_details.item_name
+							+ " "
+							+ str(item.qty)
+							+ " "
+							+ item.uom
+							+ " "
+							+ str(item_price)
 						)
 						consumable_total_amount += item_price
 						if not consumption_details:
@@ -154,7 +166,10 @@ class ClinicalProcedure(Document):
 
 				if consumable_total_amount > 0:
 					frappe.db.set_value(
-						"Clinical Procedure", self.name, "consumable_total_amount", consumable_total_amount
+						"Clinical Procedure",
+						self.name,
+						"consumable_total_amount",
+						consumable_total_amount,
 					)
 					frappe.db.set_value(
 						"Clinical Procedure", self.name, "consumption_details", consumption_details
@@ -311,7 +326,9 @@ def make_procedure(source_name, target_doc=None):
 			target.consume_stock = 1
 			warehouse = None
 			if source.service_unit:
-				warehouse = frappe.db.get_value("Healthcare Service Unit", source.service_unit, "warehouse")
+				warehouse = frappe.db.get_value(
+					"Healthcare Service Unit", source.service_unit, "warehouse"
+				)
 			if not warehouse:
 				warehouse = frappe.db.get_value("Stock Settings", None, "default_warehouse")
 			if warehouse:
@@ -356,7 +373,14 @@ def get_procedure_prescribed(patient, encounter=False):
 	return (
 		frappe.qb.from_(hso)
 		.select(
-			hso.template_dn, hso.order_group, hso.billing_status, hso.practitioner, hso.order_date, hso.name
+			hso.template_dn,
+			hso.order_group,
+			hso.invoiced,
+			hso.practitioner,
+			hso.order_date,
+			hso.name,
+			hso.insurance_policy,
+			hso.insurance_payor,
 		)
 		.where(hso.patient == patient)
 		.where(hso.status != "completed-Request Status")

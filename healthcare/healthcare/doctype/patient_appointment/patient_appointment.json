@@ -41,6 +41,11 @@
   "add_video_conferencing",
   "event",
   "google_meet_link",
+  "insurance_section",
+  "insurance_policy",
+  "insurance_payor",
+  "column_break_49",
+  "insurance_coverage",
   "section_break_16",
   "mode_of_payment",
   "billing_item",
@@ -422,7 +427,47 @@
     "options": "Service Request",
     "read_only": 1,
     "search_index": 1
-  }
+  },
+  {
+    "depends_on": "patient",
+    "fieldname": "insurance_section",
+    "fieldtype": "Section Break",
+    "label": "Insurance "
+   },
+   {
+    "fieldname": "column_break_49",
+    "fieldtype": "Column Break"
+   },
+   {
+    "fetch_from": "insurance_policy.insurance_payor",
+    "fieldname": "insurance_payor",
+    "fieldtype": "Link",
+    "label": "Insurance Payor",
+    "options": "Insurance Payor",
+    "read_only": 1
+   },
+   {
+    "fieldname": "insurance_policy",
+    "fieldtype": "Link",
+    "label": "Insurance Policy",
+    "options": "Patient Insurance Policy",
+    "read_only_depends_on": "eval:doc.insurance_coverage"
+   },
+   {
+    "fieldname": "insurance_coverage",
+    "fieldtype": "Link",
+    "label": "Insurance Coverage",
+    "options": "Patient Insurance Coverage",
+    "read_only": 1
+   },
+   {
+    "fetch_from": "insurance_coverage.status",
+    "fetch_if_empty": 1,
+    "fieldname": "coverage_status",
+    "fieldtype": "Data",
+    "label": "Claim Status",
+    "read_only": 1
+   }
  ],
  "links": [],
  "modified": "2023-06-10 13:39:03.455568",
