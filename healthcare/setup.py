@@ -99,6 +99,35 @@ data = {
 				"insert_after": "medical_department",
 				"read_only": True,
 			},
+			{
+				"fieldname": "insurance",
+				"label": "Insurance",
+				"fieldtype": "Section Break",
+				"insert_after": "base_rate_with_margin",
+			},
+			{
+				"fieldname": "insurance_coverage_amount",
+				"label": "Insurance Coverage Amount",
+				"fieldtype": "Float",
+				"options": "Patient Insurance Coverage",
+				"insert_after": "insurance",
+				"read_only": True,
+			},
+			{
+				"fieldname": "coverage_percentage",
+				"label": "Coverage Percentage",
+				"fieldtype": "Percent",
+				"insert_after": "insurance_coverage_amount",
+				"read_only": True,
+			},
+			{
+				"fieldname": "insurance_payor",
+				"label": "Insurance Payor",
+				"fieldtype": "Link",
+				"options": "Insurance Payor",
+				"insert_after": "coverage_percentage",
+				"read_only": True,
+			},
 		],
 		"Stock Entry": [
 			{
