@@ -1,5 +1,10 @@
 import frappe
+from frappe.utils import flt
+
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
+
+from healthcare.healthcare.doctype.patient_appointment.patient_appointment import check_registration_validity
+from healthcare.healthcare.doctype.healthcare_settings.healthcare_settings import get_income_account
 
 
 class HealthcareSalesInvoice(SalesInvoice):
@@ -40,5 +45,31 @@ class HealthcareSalesInvoice(SalesInvoice):
 				item_line.reference_dn = checked_item["dn"]
 			if checked_item["description"]:
 				item_line.description = checked_item["description"]
+
+		# Add Registration item if patient registration validity expires or not found for the patient
+		registrations = check_registration_validity(self.patient)
+		if not registrations:
+			uom = frappe.db.exists("UOM", "Nos") or frappe.db.get_single_value(
+				"Stock Settings", "stock_uom"
+			)
+			registration_fee, registration_fee_item = frappe.db.get_value(
+				"Healthcare Settings", None, ["registration_fee", "registration_fee_item"]
+			)
+			item = self.append("items")
+
+			if registration_fee_item:
+				item.item_code = registration_fee_item
+			else:
+				item.item_name = "Registration Fee"
+			item.description = "Registration Fee"
+			item.cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+			item.rate = flt(registration_fee)
+			item.amount = flt(registration_fee)
+			item.qty = 1
+			item.uom = uom
+			item.conversion_factor = 1
+			item.income_account = get_income_account(None, self.company)
+			item.reference_dt = "Patient"
+			item.reference_dn = self.patient
 
 		self.set_missing_values(for_validate=True)

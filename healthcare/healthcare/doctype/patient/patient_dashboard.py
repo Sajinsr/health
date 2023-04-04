@@ -22,5 +22,6 @@ def get_data():
 			{"label": _("Surgery"), "items": ["Clinical Procedure"]},
 			{"label": _("Admissions"), "items": ["Inpatient Record", "Inpatient Medication Order"]},
 			{"label": _("Billing and Payments"), "items": ["Sales Invoice", "Payment Entry"]},
+			{"label": _("Registration"), "items": ["Registration Validity"]}
 		],
 	}

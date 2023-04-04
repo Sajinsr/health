@@ -46,8 +46,6 @@ class PatientAppointment(Document):
 	def after_insert(self):
 		self.update_prescription_details()
 		self.set_payment_details()
-		invoice_appointment(self)
-		self.update_fee_validity()
 		send_confirmation_msg(self)
 		self.insert_calendar_event()
 
@@ -187,18 +185,6 @@ class PatientAppointment(Document):
 				if comments:
 					frappe.db.set_value("Patient Appointment", self.name, "notes", comments)
 
-	def update_fee_validity(self):
-		if not frappe.db.get_single_value("Healthcare Settings", "enable_free_follow_ups"):
-			return
-
-		fee_validity = manage_fee_validity(self)
-		if fee_validity:
-			frappe.msgprint(
-				_("{0}: {1} has fee validity till {2}").format(
-					self.patient, frappe.bold(self.patient_name), fee_validity.valid_till
-				)
-			)
-
 	def insert_calendar_event(self):
 		starts_on = datetime.datetime.combine(
 			getdate(self.appointment_date), get_time(self.appointment_time)
@@ -286,73 +272,144 @@ class PatientAppointment(Document):
 
 
 @frappe.whitelist()
-def check_payment_fields_reqd(patient):
-	automate_invoicing = frappe.db.get_single_value(
-		"Healthcare Settings", "automate_appointment_invoicing"
+def check_payment_reqd(patient):
+	"""
+	return True if patient need to be invoiced when automate_appointment_invoicing enabled and collect_registration_fee or have no fee validity
+	return False automate_appointment_invoicing is disabled
+	"""
+	automate_invoicing, collect_registration_fee, free_follow_ups = frappe.db.get_value(
+		"Healthcare Settings",
+		"Healthcare Settings",
+		[
+			"automate_appointment_invoicing",
+			"collect_registration_fee",
+			"enable_free_follow_ups",
+		],
 	)
-	free_follow_ups = frappe.db.get_single_value("Healthcare Settings", "enable_free_follow_ups")
+
 	if automate_invoicing:
+		if collect_registration_fee:
+			registered = check_registration_validity(patient)
+			if not registered:
+				return True
+
 		if free_follow_ups:
-			fee_validity = frappe.db.exists("Fee Validity", {"patient": patient, "status": "Pending"})
+			fee_validity = frappe.db.exists(
+				"Fee Validity", {"patient": patient, "status": "Pending"}
+			)
 			if fee_validity:
 				return {"fee_validity": fee_validity}
 		return True
 	return False
 
 
-def invoice_appointment(appointment_doc):
+@frappe.whitelist()
+def invoice_appointment(appointment_name):
+	appointment_doc = frappe.get_doc("Patient Appointment", appointment_name)
+
 	automate_invoicing = frappe.db.get_single_value(
 		"Healthcare Settings", "automate_appointment_invoicing"
 	)
-	appointment_invoiced = frappe.db.get_value(
-		"Patient Appointment", appointment_doc.name, "invoiced"
-	)
-	enable_free_follow_ups = frappe.db.get_single_value(
-		"Healthcare Settings", "enable_free_follow_ups"
-	)
-	if enable_free_follow_ups:
-		fee_validity = check_fee_validity(appointment_doc)
-		if fee_validity and fee_validity.status == "Completed":
-			fee_validity = None
-		elif not fee_validity:
-			if frappe.db.exists("Fee Validity Reference", {"appointment": appointment_doc.name}):
-				return
-	else:
-		fee_validity = None
 
-	if automate_invoicing and not appointment_invoiced and not fee_validity:
-		create_sales_invoice(appointment_doc)
+	fee_validity = check_fee_validity(appointment_doc)
+
+	if ( automate_invoicing and not appointment_doc.invoiced and not fee_validity ):
+		sales_invoice = frappe.new_doc("Sales Invoice")
+		sales_invoice.patient = appointment_doc.patient
+		sales_invoice.customer = frappe.get_value(
+			"Patient", appointment_doc.patient, "customer"
+		)
+		sales_invoice.appointment = appointment_doc.name
+		sales_invoice.due_date = getdate()
+		sales_invoice.company = appointment_doc.company
+		sales_invoice.debit_to = get_receivable_account(appointment_doc.company)
+
+		item = sales_invoice.append("items", {})
+		item = get_appointment_item(appointment_doc, item)
+
+		registrations = check_registration_validity(appointment_doc.patient)
+
+		registration_fee = 0
+		if not registrations:
+			uom = frappe.db.exists("UOM", "Nos") or frappe.db.get_single_value(
+				"Stock Settings", "stock_uom"
+			)
+			registration_fee, registration_fee_item = frappe.db.get_value(
+				"Healthcare Settings", None, ["registration_fee", "registration_fee_item"]
+			)
+			item = sales_invoice.append("items")
+
+			if registration_fee_item:
+				item.item_code = registration_fee_item
+			else:
+				item.item_name = "Registration Fee"
+				frappe.msgprint(
+					_("Configure Registration Item in {0}").format(
+						get_link_to_form("Healthcare Settings", "Healthcare Settings")
+					),
+					title=_("Warning!"),
+					indicator="orange",
+					alert=1,
+				)
+			item.item_name = "Registration Fee"
+			item.description = "Registration Fee"
+			item.income_account = get_income_account(
+				appointment_doc.practitioner, appointment_doc.company
+			)
+			item.cost_center = frappe.get_cached_value(
+				"Company", appointment_doc.company, "cost_center"
+			)
+			item.rate = flt(registration_fee)
+			item.amount = flt(registration_fee)
+			item.qty = 1
+			item.uom = uom
+			item.conversion_factor = 1
+			item.income_account = get_income_account(None, appointment_doc.company)
+			item.reference_dt = "Patient"
+			item.reference_dn = appointment_doc.patient
+
+		# Add payments if payment details are supplied else proceed to create invoice as Unpaid
+		if appointment_doc.mode_of_payment and appointment_doc.paid_amount:
+			sales_invoice.is_pos = 1
+			payment = sales_invoice.append("payments", {})
+			payment.mode_of_payment = appointment_doc.mode_of_payment
+			payment.amount = appointment_doc.paid_amount + flt(registration_fee)
+
+		sales_invoice.set_missing_values(for_validate=True)
+		sales_invoice.flags.ignore_mandatory = True
+		sales_invoice.save(ignore_permissions=True)
+		sales_invoice.submit()
+
+		frappe.msgprint(
+			_("Sales Invoice {0} created").format(sales_invoice.name), alert=True
+		)
+
+		frappe.db.set_value(
+			"Patient Appointment",
+			appointment_doc.name,
+			{
+				"ref_sales_invoice": sales_invoice.name,
+				"paid_amount": appointment_doc.paid_amount,
+			},
+		)
+
+	update_fee_validity(appointment_doc.name)
 
 
-def create_sales_invoice(appointment_doc):
-	sales_invoice = frappe.new_doc("Sales Invoice")
-	sales_invoice.patient = appointment_doc.patient
-	sales_invoice.customer = frappe.get_value("Patient", appointment_doc.patient, "customer")
-	sales_invoice.appointment = appointment_doc.name
-	sales_invoice.due_date = getdate()
-	sales_invoice.company = appointment_doc.company
-	sales_invoice.debit_to = get_receivable_account(appointment_doc.company)
+@frappe.whitelist()
+def update_fee_validity(appointment_name):
+	if not frappe.db.get_single_value("Healthcare Settings", "enable_free_follow_ups"):
+		return
 
-	item = sales_invoice.append("items", {})
-	item = get_appointment_item(appointment_doc, item)
+	appointment = frappe.get_doc("Patient Appointment", appointment_name)
 
-	# Add payments if payment details are supplied else proceed to create invoice as Unpaid
-	if appointment_doc.mode_of_payment and appointment_doc.paid_amount:
-		sales_invoice.is_pos = 1
-		payment = sales_invoice.append("payments", {})
-		payment.mode_of_payment = appointment_doc.mode_of_payment
-		payment.amount = appointment_doc.paid_amount
-
-	sales_invoice.set_missing_values(for_validate=True)
-	sales_invoice.flags.ignore_mandatory = True
-	sales_invoice.save(ignore_permissions=True)
-	sales_invoice.submit()
-	frappe.msgprint(_("Sales Invoice {0} created").format(sales_invoice.name), alert=True)
-	frappe.db.set_value(
-		"Patient Appointment",
-		appointment_doc.name,
-		{"invoiced": 1, "ref_sales_invoice": sales_invoice.name},
-	)
+	fee_validity = manage_fee_validity(appointment)
+	if fee_validity:
+		frappe.msgprint(
+			_("{0}: {1} has fee validity till {2}").format(
+				appointment.patient, frappe.bold(appointment.patient_name), fee_validity.valid_till
+			), indicator="green", alert=True
+		)
 
 
 def check_is_new_patient(patient, name=None):
@@ -389,7 +446,7 @@ def cancel_appointment(appointment_id):
 			)
 		else:
 			msg = _("Appointment Cancelled. Please review and cancel the invoice {0}").format(
-				sales_invoice.name
+				get_link_to_form("Sales Invoice", sales_invoice.name)
 			)
 	else:
 		fee_validity = manage_fee_validity(appointment)
@@ -407,7 +464,7 @@ def cancel_appointment(appointment_id):
 
 def cancel_sales_invoice(sales_invoice):
 	if frappe.db.get_single_value("Healthcare Settings", "automate_appointment_invoicing"):
-		if len(sales_invoice.items) == 1:
+		if len(sales_invoice.items) > 0:
 			sales_invoice.cancel()
 			return True
 	return False
@@ -755,3 +812,28 @@ def update_appointment_status():
 
 	for appointment in appointments:
 		frappe.get_doc("Patient Appointment", appointment.name).set_status()
+
+
+@frappe.whitelist()
+def check_registration_validity(patient):
+	"""
+	return True if patient having valid registration or no need of registration else None
+	"""
+
+	if frappe.db.get_single_value("Healthcare Settings", "collect_registration_fee"):
+		reg = frappe.qb.DocType("Registration Validity")
+
+		registrations = (
+			frappe.qb.from_(reg)
+			.select(reg.name)
+			.where(reg.docstatus == 1)
+			.where(reg.patient == patient)
+			.where(reg.valid_from <= getdate())
+			.where((reg.valid_to.isnull()) | (reg.valid_to > getdate()))
+			.where(reg.status == "Active")
+			.orderby(reg.valid_to, order=frappe.qb.desc)
+		).run(as_dict=True)
+
+		return True if registrations else None
+	else:
+		return True

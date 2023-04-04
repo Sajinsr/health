@@ -182,6 +182,9 @@ class Patient(Document):
 			if not company:
 				company = frappe.db.get_single_value("Global Defaults", "default_company")
 
+			if not company:
+				frappe.throw(_("Company not found in Global Defaults or Session Defaults"))
+
 			sales_invoice = make_invoice(self.name, company)
 			sales_invoice.save(ignore_permissions=True)
 			frappe.db.set_value("Patient", self.name, "status", "Active")
@@ -277,21 +280,35 @@ def create_customer(doc):
 def make_invoice(patient, company):
 	uom = frappe.db.exists("UOM", "Nos") or frappe.db.get_single_value("Stock Settings", "stock_uom")
 	sales_invoice = frappe.new_doc("Sales Invoice")
+	sales_invoice.patient = patient
 	sales_invoice.customer = frappe.db.get_value("Patient", patient, "customer")
 	sales_invoice.due_date = getdate()
 	sales_invoice.company = company
 	sales_invoice.is_pos = 0
 	sales_invoice.debit_to = get_receivable_account(company)
 
+	# insert registration item if available at Healthcare Settings
 	item_line = sales_invoice.append("items")
-	item_line.item_name = "Registration Fee"
+	registration_item = frappe.db.get_single_value(
+		"Healthcare Settings", "registration_fee_item"
+	)
+
+	if registration_item:
+		item_line.item_code = registration_item
+	else:
+		item_line.item_name = "Registration Fee"
+
 	item_line.description = "Registration Fee"
 	item_line.qty = 1
 	item_line.uom = uom
 	item_line.conversion_factor = 1
 	item_line.income_account = get_income_account(None, company)
-	item_line.rate = frappe.db.get_single_value("Healthcare Settings", "registration_fee")
+	item_line.rate = frappe.db.get_single_value(
+		"Healthcare Settings", "registration_fee"
+	)
 	item_line.amount = item_line.rate
+	item_line.reference_dt = "Patient"
+	item_line.reference_dn = patient
 	sales_invoice.set_missing_values()
 	return sales_invoice
 

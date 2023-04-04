@@ -15,6 +15,7 @@
   "column_break_9",
   "collect_registration_fee",
   "registration_fee",
+  "registration_validity",
   "automate_appointment_invoicing",
   "enable_free_follow_ups",
   "max_visits",
@@ -36,6 +37,7 @@
   "op_consulting_charge_item",
   "column_break_13",
   "clinical_procedure_consumable_item",
+  "registration_fee_item",
   "sb_in_ac",
   "income_account",
   "receivable_account",
@@ -351,16 +353,29 @@
    "label": "Alerts"
   },
   {
-  "description": "For use while scheduling tele-consultations via Google Meet",
+   "description": "For use while scheduling tele-consultations via Google Meet",
    "fieldname": "default_google_calendar",
    "fieldtype": "Link",
    "label": "Default Google Calendar",
    "options": "Google Calendar"
+  },
+  {
+   "depends_on": "collect_registration_fee",
+   "description": "in months",
+   "fieldname": "registration_validity",
+   "fieldtype": "Float",
+   "label": "Registration Validity"
+  },
+  {
+   "fieldname": "registration_fee_item",
+   "fieldtype": "Link",
+   "label": "Registration Fee Item",
+   "options": "Item"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2023-01-13 17:51:25.440851",
+ "modified": "2023-03-30 19:54:17.728380",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Healthcare Settings",

@@ -9,7 +9,7 @@ import math
 import frappe
 from erpnext.setup.utils import insert_record
 from frappe import _
-from frappe.utils import cstr, get_link_to_form, rounded, time_diff_in_hours
+from frappe.utils import cstr, get_link_to_form, rounded, time_diff_in_hours, add_to_date
 from frappe.utils.formatters import format_value
 
 from healthcare.healthcare.doctype.fee_validity.fee_validity import create_fee_validity
@@ -494,10 +494,52 @@ def manage_invoice_submit_cancel(doc, method):
 				if frappe.get_meta(item.reference_dt).has_field("invoiced"):
 					set_invoiced(item, method, doc.name)
 
-	if method == "on_submit" and frappe.db.get_single_value(
-		"Healthcare Settings", "create_lab_test_on_si_submit"
-	):
-		create_multiple("Sales Invoice", doc.name)
+		if method == "on_submit":
+			if frappe.db.get_single_value(
+				"Healthcare Settings", "create_lab_test_on_si_submit"
+			):
+				create_multiple("Sales Invoice", doc.name)
+
+			# Add registration details for the patient if collect_registration_fee is enables
+			if frappe.db.get_single_value("Healthcare Settings", "collect_registration_fee"):
+				if doc.items:
+					for item in doc.items:
+						registration_item = frappe.db.get_single_value(
+							"Healthcare Settings", "registration_fee_item"
+						)
+						if (
+							(
+								item.get("item_code") == registration_item
+								or item.get("item_name") == "Registration Fee"
+							)
+							and item.get("reference_dt") == "Patient"
+							and item.get("reference_dn")
+						):
+							expiry_months = frappe.db.get_single_value(
+								"Healthcare Settings", "registration_validity"
+							)
+							reg = frappe.new_doc("Registration Validity")
+							reg.patient = item.get("reference_dn")
+							reg.status = "Active"
+							reg.valid_from = doc.posting_date
+							reg.valid_to = (
+								add_to_date(doc.posting_date, months=expiry_months)
+								if expiry_months
+								else None
+							)
+							reg.sales_invoice_reference = doc.name
+							reg.amount = item.get("amount")
+							reg.insert(ignore_permissions=True)
+							reg.submit()
+
+		if method == "on_cancel":
+			# cancel registration validity for the patient
+			exist = frappe.db.exists(
+				"Registration Validity", {"sales_invoice_reference": doc.name}
+			)
+			if exist:
+				reg_doc = frappe.get_doc("Registration Validity", exist)
+				reg_doc.cancel()
 
 
 def set_invoiced(item, method, ref_invoice=None):
@@ -560,9 +602,13 @@ def manage_prescriptions(invoiced, ref_dt, ref_dn, dt, created_check_field):
 		frappe.db.set_value(dt, doc_created, "invoiced", invoiced)
 
 
+@frappe.whitelist()
 def check_fee_validity(appointment):
 	if not frappe.db.get_single_value("Healthcare Settings", "enable_free_follow_ups"):
 		return
+
+	if isinstance(appointment, str):
+		appointment = frappe._dict(json.loads(appointment))
 
 	validity = frappe.db.exists(
 		"Fee Validity",

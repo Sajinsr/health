@@ -12,9 +12,12 @@ from frappe.utils import add_days, flt, get_time, getdate, now_datetime, nowdate
 
 from healthcare.healthcare.doctype.patient_appointment.patient_appointment import (
 	check_is_new_patient,
-	check_payment_fields_reqd,
+	check_payment_reqd,
 	make_encounter,
 	update_status,
+	invoice_appointment,
+	check_registration_validity,
+	update_fee_validity
 )
 
 
@@ -67,6 +70,7 @@ class TestPatientAppointment(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Patient Appointment", appointment.name, "invoiced"), 0)
 
 		frappe.db.set_value("Healthcare Settings", None, "automate_appointment_invoicing", 1)
+		registered = check_registration_validity(patient)
 		appointment = create_appointment(patient, practitioner, add_days(nowdate(), 2), invoice=1)
 		self.assertEqual(frappe.db.get_value("Patient Appointment", appointment.name, "invoiced"), 1)
 		sales_invoice_name = frappe.db.get_value(
@@ -79,8 +83,13 @@ class TestPatientAppointment(FrappeTestCase):
 		self.assertEqual(
 			frappe.db.get_value("Sales Invoice", sales_invoice_name, "patient"), appointment.patient
 		)
+
+		paid_amount = appointment.paid_amount
+		if not registered:
+			paid_amount += frappe.db.get_single_value("Healthcare Settings", "registration_fee")
+
 		self.assertEqual(
-			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"), appointment.paid_amount
+			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"), paid_amount
 		)
 
 	def test_auto_invoicing_based_on_department(self):
@@ -89,6 +98,7 @@ class TestPatientAppointment(FrappeTestCase):
 		frappe.db.set_value("Healthcare Settings", None, "enable_free_follow_ups", 0)
 		frappe.db.set_value("Healthcare Settings", None, "automate_appointment_invoicing", 1)
 		appointment_type = create_appointment_type({"medical_department": medical_department})
+		registered = check_registration_validity(patient)
 
 		appointment = create_appointment(
 			patient,
@@ -108,8 +118,12 @@ class TestPatientAppointment(FrappeTestCase):
 			"Sales Invoice Item", {"reference_dn": appointment.name}, "parent"
 		)
 		self.assertTrue(sales_invoice_name)
+
+		paid_amount = appointment.paid_amount
+		if not registered:
+			paid_amount += frappe.db.get_single_value("Healthcare Settings", "registration_fee")
 		self.assertEqual(
-			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"), appointment.paid_amount
+			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"), paid_amount
 		)
 
 	def test_auto_invoicing_according_to_appointment_type_charge(self):
@@ -164,6 +178,13 @@ class TestPatientAppointment(FrappeTestCase):
 			"Sales Invoice Item", {"reference_dn": appointment.name}, "parent"
 		)
 		self.assertEqual(frappe.db.get_value("Sales Invoice", sales_invoice_name, "status"), "Cancelled")
+
+		# if registration exist check registration validity cancelled
+		registration_status = frappe.db.get_value(
+			"Registration Validity", {"sales_invoice_reference": sales_invoice_name}, "status"
+		)
+		if registration_status:
+			self.assertEqual(registration_status, "Cancelled")
 
 	def test_appointment_booking_for_admission_service_unit(self):
 		from healthcare.healthcare.doctype.inpatient_record.inpatient_record import (
@@ -244,7 +265,7 @@ class TestPatientAppointment(FrappeTestCase):
 
 		patient = create_patient()
 		assert check_is_new_patient(patient)
-		payment_required = check_payment_fields_reqd(patient)
+		payment_required = check_payment_reqd(patient)
 		assert payment_required is True
 
 	def test_sales_invoice_should_be_generated_for_new_patient_appointment(self):
@@ -469,6 +490,9 @@ def create_appointment(
 		appointment.procedure_template = create_clinical_procedure_template().get("name")
 	if save:
 		appointment.save(ignore_permissions=True)
+
+		if invoice or frappe.db.get_single_value("Healthcare Settings", "automate_appointment_invoicing"):
+			invoice_appointment(appointment.name)
 
 	return appointment
 
