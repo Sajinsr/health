@@ -564,13 +564,18 @@ def check_fee_validity(appointment):
 	if not frappe.db.get_single_value("Healthcare Settings", "enable_free_follow_ups"):
 		return
 
+	filters = {
+		"practitioner": appointment.practitioner,
+		"patient": appointment.patient,
+		"valid_till": (">=", appointment.appointment_date),
+		"start_date": ("<=", appointment.appointment_date),
+	}
+	if appointment.status != "Cancelled":
+		filters["status"] = "Active"
+
 	validity = frappe.db.exists(
 		"Fee Validity",
-		{
-			"practitioner": appointment.practitioner,
-			"patient": appointment.patient,
-			"valid_till": (">=", appointment.appointment_date),
-		},
+		filters,
 	)
 	if not validity:
 		return
@@ -586,7 +591,7 @@ def manage_fee_validity(appointment):
 		if appointment.status == "Cancelled" and fee_validity.visited > 0:
 			fee_validity.visited -= 1
 			frappe.db.delete("Fee Validity Reference", {"appointment": appointment.name})
-		elif fee_validity.status == "Completed":
+		elif fee_validity.status != "Active":
 			return
 		else:
 			fee_validity.visited += 1

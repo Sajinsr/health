@@ -15,19 +15,26 @@ class FeeValidity(Document):
 		self.update_status()
 
 	def update_status(self):
-		if self.visited >= self.max_visits:
+		if getdate(self.valid_till) < getdate():
+			self.status = "Expired"
+		elif self.visited == self.max_visits:
 			self.status = "Completed"
 		else:
-			self.status = "Pending"
+			self.status = "Active"
 
 
 def create_fee_validity(appointment):
-	if not check_is_new_patient(appointment):
+	if patient_has_validity(appointment):
 		return
 
 	fee_validity = frappe.new_doc("Fee Validity")
 	fee_validity.practitioner = appointment.practitioner
 	fee_validity.patient = appointment.patient
+	fee_validity.medical_department = appointment.department
+	fee_validity.patient_appointment = appointment.name
+	fee_validity.sales_invoice_ref = frappe.db.get_value(
+		"Sales Invoice Item", {"reference_dn": appointment.name}, "parent"
+	)
 	fee_validity.max_visits = frappe.db.get_single_value("Healthcare Settings", "max_visits") or 1
 	valid_days = frappe.db.get_single_value("Healthcare Settings", "valid_days") or 1
 	fee_validity.visited = 0
@@ -39,22 +46,26 @@ def create_fee_validity(appointment):
 	return fee_validity
 
 
-def check_is_new_patient(appointment):
+def patient_has_validity(appointment):
 	validity_exists = frappe.db.exists(
-		"Fee Validity", {"practitioner": appointment.practitioner, "patient": appointment.patient}
-	)
-	if validity_exists:
-		return False
-
-	appointment_exists = frappe.db.get_all(
-		"Patient Appointment",
+		"Fee Validity",
 		{
-			"name": ("!=", appointment.name),
-			"status": ("!=", "Cancelled"),
-			"patient": appointment.patient,
 			"practitioner": appointment.practitioner,
+			"patient": appointment.patient,
+			"status": "Active",
+			"valid_till": [">=", appointment.appointment_date],
+			"start_date": ["<=", appointment.appointment_date],
 		},
 	)
-	if len(appointment_exists) and appointment_exists[0]:
-		return False
-	return True
+
+	return True if validity_exists else False
+
+
+def update_validity_status():
+	# update the status of fee validity daily
+	validities = frappe.db.get_all("Fee Validity", {"status": ["not in", ["Expired", "Cancelled"]]})
+
+	for fee_validity in validities:
+		fee_validity_doc = frappe.get_doc("Fee Validity", fee_validity.name)
+		fee_validity_doc.update_status()
+		fee_validity_doc.save()

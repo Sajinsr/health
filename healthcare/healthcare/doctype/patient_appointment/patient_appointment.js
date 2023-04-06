@@ -305,13 +305,14 @@ let check_and_set_availability = function(frm) {
 			title: __('Available slots'),
 			fields: [
 				{ fieldtype: 'Link', options: 'Medical Department', reqd: 1, fieldname: 'department', label: 'Medical Department' },
+				{ fieldtype: 'Link', options: 'Mode of Payment', fieldname: 'mode_of_payment', label: 'Mode of Payment', hidden:1,
+					description: `The Rescheduled date is outside of fee validity date, This needs to be invoiced, Please select mode of payment.` },
 				{ fieldtype: 'Column Break' },
 				{ fieldtype: 'Link', options: 'Healthcare Practitioner', reqd: 1, fieldname: 'practitioner', label: 'Healthcare Practitioner' },
 				{ fieldtype: 'Column Break' },
 				{ fieldtype: 'Date', reqd: 1, fieldname: 'appointment_date', label: 'Date', min_date: new Date(frappe.datetime.get_today()) },
 				{ fieldtype: 'Section Break' },
 				{ fieldtype: 'HTML', fieldname: 'available_slots' }
-
 			],
 			primary_action_label: __('Book'),
 			primary_action: function() {
@@ -328,6 +329,9 @@ let check_and_set_availability = function(frm) {
 				frm.set_value('practitioner', d.get_value('practitioner'));
 				frm.set_value('department', d.get_value('department'));
 				frm.set_value('appointment_date', d.get_value('appointment_date'));
+				if (d.get_value('mode_of_payment')) {
+					frm.set_value('mode_of_payment', d.get_value('mode_of_payment'))
+				};
 
 				if (service_unit) {
 					frm.set_value('service_unit', service_unit);
@@ -375,6 +379,7 @@ let check_and_set_availability = function(frm) {
 
 		d.fields_dict['appointment_date'].df.onchange = () => {
 			show_slots(d, fd);
+			validate_fee_validity(frm, d);
 		};
 		d.fields_dict['practitioner'].df.onchange = () => {
 			if (d.get_value('practitioner') && d.get_value('practitioner') != selected_practitioner) {
@@ -384,6 +389,29 @@ let check_and_set_availability = function(frm) {
 		};
 
 		d.show();
+	}
+
+	async function validate_fee_validity(frm, d) {
+		var field = d.get_field("mode_of_payment");
+		field.df.hidden = 1;
+		field.df.reqd = 0;
+		if (d.get_value('appointment_date')) {
+			if (!frm.is_new()) {
+				let has_free_visit = (await frappe.call(
+					'healthcare.healthcare.doctype.patient_appointment.patient_appointment.has_free_visit',
+					{
+						appointment_name: frm.doc.name,
+						date: d.get_value('appointment_date'),
+						invoiced: frm.doc.invoiced,
+					}
+				)).message;
+				if (!has_free_visit) {
+					field.df.hidden = 0;
+					field.df.reqd = 1;
+				}
+			}
+		}
+		field.refresh();
 	}
 
 	function show_slots(d, fd) {
