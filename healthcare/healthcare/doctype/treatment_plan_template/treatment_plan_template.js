@@ -17,6 +17,16 @@ frappe.ui.form.on("Treatment Plan Template", {
 				}
 			};
 		});
+
+		frm.set_query("practitioners", function () {
+			if (frm.doc.medical_department) {
+				return {
+					filters: {
+						"department": frm.doc.medical_department
+					}
+				};
+			}
+		});
 	},
 });
 
