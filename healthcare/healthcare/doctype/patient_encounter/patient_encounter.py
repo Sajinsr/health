@@ -17,11 +17,13 @@ class PatientEncounter(Document):
 		self.set_title()
 		validate_codification_table(self)
 
-	def on_update(self):
+	def after_insert(self):
 		if self.appointment:
-			frappe.db.set_value("Patient Appointment", self.appointment, "status", "Closed")
+			frappe.db.set_value("Patient Appointment", self.appointment, "status", "In Progress")
 
 	def on_submit(self):
+		if self.appointment:
+			frappe.db.set_value("Patient Appointment", self.appointment, "status", "Closed")
 		if self.therapies:
 			create_therapy_plan(self)
 

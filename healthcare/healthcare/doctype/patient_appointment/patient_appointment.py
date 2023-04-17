@@ -79,7 +79,8 @@ class PatientAppointment(Document):
 			FROM
 				`tabPatient Appointment`
 			WHERE
-				appointment_date=%(appointment_date)s AND name!=%(name)s AND status NOT IN ("Closed", "Cancelled") AND
+				appointment_date=%(appointment_date)s AND name!=%(name)s AND
+				status NOT IN ('In Progress', 'Closed', 'Cancelled') AND
 				(practitioner=%(practitioner)s OR patient=%(patient)s) AND
 				((appointment_time<%(appointment_time)s AND appointment_time + INTERVAL duration MINUTE>%(appointment_time)s) OR
 				(appointment_time>%(appointment_time)s AND appointment_time<%(end_time)s) OR
@@ -749,11 +750,17 @@ def get_prescribed_therapies(patient):
 
 def update_appointment_status():
 	# update the status of appointments daily
+	today = getdate()
 	appointments = frappe.get_all(
-		"Patient Appointment", {"status": ("not in", ["Closed", "Cancelled"])}
+		"Patient Appointment",
+		{
+			"status": ("in", ["Open", "Scheduled"]),
+		},
+		["name", "status", "appointment_date"],
 	)
 
 	for appointment in appointments:
-		appointment_doc = frappe.get_doc("Patient Appointment", appointment.name)
-		appointment_doc.set_status()
-		appointment_doc.save()
+		if appointment.status == "Open" and getdate(appointment.appointment_date) < today:
+			frappe.db.set_value("Patient Appointment", appointment.name, "status", "No Show")
+		elif appointment.status == "Scheduled" and getdate(appointment.appointment_date) == today:
+			frappe.db.set_value("Patient Appointment", appointment.name, "status", "Open")

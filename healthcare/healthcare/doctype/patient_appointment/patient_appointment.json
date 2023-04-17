@@ -2,7 +2,6 @@
  "actions": [],
  "allow_import": 1,
  "autoname": "naming_series:",
- "beta": 0,
  "creation": "2017-05-04 11:52:40.941507",
  "doctype": "DocType",
  "document_type": "Document",
@@ -100,7 +99,7 @@
    "in_filter": 1,
    "in_list_view": 1,
    "label": "Status",
-   "options": "\nScheduled\nOpen\nClosed\nCancelled",
+   "options": "\nScheduled\nOpen\nNo Show\nIn Progress\nClosed\nCancelled",
    "read_only": 1,
    "search_index": 1
   },
@@ -370,7 +369,7 @@
   }
  ],
  "links": [],
- "modified": "2022-08-16 19:10:10.528001",
+ "modified": "2023-04-17 11:54:15.870071",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Patient Appointment",
