@@ -15,7 +15,7 @@
   "column_break_9",
   "collect_registration_fee",
   "registration_fee",
-  "automate_appointment_invoicing",
+  "show_payment_popup",
   "enable_free_follow_ups",
   "max_visits",
   "valid_days",
@@ -231,13 +231,6 @@
   },
   {
    "default": "0",
-   "description": "Manage Appointment Invoice submit and cancel automatically for Patient Encounter",
-   "fieldname": "automate_appointment_invoicing",
-   "fieldtype": "Check",
-   "label": "Automate Appointment Invoicing"
-  },
-  {
-   "default": "0",
    "fieldname": "send_registration_msg",
    "fieldtype": "Check",
    "label": "Patient Registration"
@@ -351,16 +344,23 @@
    "label": "Alerts"
   },
   {
-  "description": "For use while scheduling tele-consultations via Google Meet",
+   "description": "For use while scheduling tele-consultations via Google Meet",
    "fieldname": "default_google_calendar",
    "fieldtype": "Link",
    "label": "Default Google Calendar",
    "options": "Google Calendar"
+  },
+  {
+   "default": "0",
+   "description": "Checking this will popup to invoice appointment",
+   "fieldname": "show_payment_popup",
+   "fieldtype": "Check",
+   "label": "Show Payment Popup"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2023-01-13 17:51:25.440851",
+ "modified": "2023-04-26 14:43:22.864686",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Healthcare Settings",
