@@ -545,6 +545,9 @@ def manage_invoice_validate(doc, method):
 
 
 def manage_invoice_submit_cancel(doc, method):
+	if not doc.patient:
+		return
+
 	if doc.items:
 		for item in doc.items:
 			if item.get("reference_dt") and item.get("reference_dn"):
