@@ -162,7 +162,33 @@ frappe.ui.form.on('Practitioner Schedule', {
 					}
 				},
 			});
+			d.fields_dict['create_slots'].df.onchange = () => {
+				set_maximum_no_of_appointments(d)
+			}
+			d.fields_dict['from_time'].df.onchange = () => {
+				set_maximum_no_of_appointments(d)
+			}
+			d.fields_dict['to_time'].df.onchange = () => {
+				set_maximum_no_of_appointments(d)
+			}
+			d.fields_dict['duration'].df.onchange = () => {
+				set_maximum_no_of_appointments(d)
+			}
 			d.show();
 		});
 	}
 });
+
+var set_maximum_no_of_appointments = function(d) {
+	if (!d.get_value("create_slots")) {
+		let interval = 0;
+		let max_apps = 0;
+		if (d.get_value("from_time") && d.get_value("to_time")) {
+			interval = (moment(d.get_value("from_time"), 'HH:mm:ss') - moment(d.get_value("to_time"), 'HH:mm:ss')) / 60000 | 0;
+			max_apps = Math.abs(interval) / d.get_value("duration")
+			d.set_value("maximum_appointments", Math.floor(max_apps))
+		}
+	} else {
+		d.set_value("maximum_appointments", 0)
+	}
+}
