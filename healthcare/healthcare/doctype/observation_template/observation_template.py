@@ -60,7 +60,9 @@ class ObservationTemplate(Document):
 
 def create_item_from_template(doc):
 	if doc.is_billable:
-		uom = frappe.db.exists("UOM", "Unit") or frappe.db.get_single_value("Stock Settings", "stock_uom")
+		uom = frappe.db.exists("UOM", "Unit") or frappe.db.get_single_value(
+			"Stock Settings", "stock_uom"
+		)
 		# Insert item
 		item = frappe.get_doc(
 			{

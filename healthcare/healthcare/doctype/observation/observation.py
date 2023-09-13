@@ -10,8 +10,8 @@ from erpnext.setup.doctype.terms_and_conditions.terms_and_conditions import (
 )
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.workflow import get_workflow_name, get_workflow_state_field
 from frappe.utils import now_datetime
-from frappe.model.workflow import (get_workflow_name, get_workflow_state_field)
 
 
 class Observation(Document):
@@ -92,7 +92,12 @@ def get_observation_details(docname):
 	observation = frappe.get_list(
 		"Observation",
 		fields=["*"],
-		filters={"sales_invoice": reference, "parent_observation": "", "status": ["!=", "Cancelled"], "docstatus":["!=", 2]},
+		filters={
+			"sales_invoice": reference,
+			"parent_observation": "",
+			"status": ["!=", "Cancelled"],
+			"docstatus": ["!=", 2],
+		},
 		order_by="creation",
 	)
 	out_data = []
@@ -116,7 +121,11 @@ def get_observation_details(docname):
 			child_observations = frappe.get_list(
 				"Observation",
 				fields=["*"],
-				filters={"parent_observation": obs.get("name"), "status": ["!=", "Cancelled"], "docstatus":["!=", 2]},
+				filters={
+					"parent_observation": obs.get("name"),
+					"status": ["!=", "Cancelled"],
+					"docstatus": ["!=", 2],
+				},
 				order_by="observation_idx",
 			)
 			obs_list = []
@@ -137,7 +146,7 @@ def get_observation_details(docname):
 					or child.get("result_select") not in [None, "", "Null"]
 				):
 					has_result = True
-				if child.get("status")=="Approved":
+				if child.get("status") == "Approved":
 					obs_approved = True
 			if len(child_observations) > 0:
 				obs_dict["has_component"] = True
@@ -228,7 +237,7 @@ def add_observation(
 	specimen=None,
 	invoice="",
 	practitioner=None,
-	child = None,
+	child=None,
 ):
 	observation_doc = frappe.new_doc("Observation")
 	observation_doc.posting_datetime = now_datetime()
@@ -393,18 +402,34 @@ def set_observation_status(observation, status, reason=None):
 	else:
 		frappe.throw(_("Please enter result to Approve."))
 
+
 def set_diagnostic_report_status(doc):
 	if doc.has_result() and doc.sales_invoice and not doc.has_component and doc.sales_invoice:
-		observations = frappe.db.get_all("Observation", {"sales_invoice": doc.sales_invoice, "docstatus": 0, "status": ["!=", "Approved"], "has_component":0})
-		diagnostic_report = frappe.db.get_value("Diagnostic Report", {"ref_doctype": "Sales Invoice", "docname":doc.sales_invoice}, ["name"], as_dict=True)
+		observations = frappe.db.get_all(
+			"Observation",
+			{
+				"sales_invoice": doc.sales_invoice,
+				"docstatus": 0,
+				"status": ["!=", "Approved"],
+				"has_component": 0,
+			},
+		)
+		diagnostic_report = frappe.db.get_value(
+			"Diagnostic Report",
+			{"ref_doctype": "Sales Invoice", "docname": doc.sales_invoice},
+			["name"],
+			as_dict=True,
+		)
 		if diagnostic_report:
 			workflow_name = get_workflow_name("Diagnostic Report")
 			workflow_state_field = get_workflow_state_field(workflow_name)
-			if observations and len(observations)>0:
+			if observations and len(observations) > 0:
 				set_status = "Partially Approved"
 			else:
 				set_status = "Approved"
 			set_value_dict = {"status": set_status}
 			if workflow_state_field:
 				set_value_dict[workflow_state_field] = set_status
-			frappe.db.set_value("Diagnostic Report", diagnostic_report.get("name"), set_value_dict, update_modified=False)
+			frappe.db.set_value(
+				"Diagnostic Report", diagnostic_report.get("name"), set_value_dict, update_modified=False
+			)

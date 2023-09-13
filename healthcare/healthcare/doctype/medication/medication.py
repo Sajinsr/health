@@ -68,6 +68,7 @@ def create_item_from_medication(doc):
 		insert_item(doc, item)
 	doc.reload()
 
+
 def insert_item(doc, item):
 	if not frappe.db.exists("Item", item.item_code):
 		item_doc = frappe.get_doc(
@@ -99,7 +100,9 @@ def insert_item(doc, item):
 
 
 def make_item_price(item, item_price):
-	if not frappe.db.exists({"doctype": "Item Price", "price_list_rate": item_price, "item_code": item}):
+	if not frappe.db.exists(
+		{"doctype": "Item Price", "price_list_rate": item_price, "item_code": item}
+	):
 		price_list_name = frappe.db.get_value("Price List", {"selling": 1})
 		frappe.get_doc(
 			{

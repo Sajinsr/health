@@ -14,7 +14,6 @@ from healthcare.healthcare.doctype.service_request.service_request import (
 )
 
 
-
 class LabTest(Document):
 	def validate(self):
 		if not self.is_new():
@@ -96,20 +95,21 @@ class LabTest(Document):
 						title=_("Mandatory Results"),
 					)
 
-def before_insert(self):
-	if self.service_request:
-		lab_test = frappe.db.exists(
-			"Lab Test",
-			{"service_request": self.service_request, "docstatus": ["!=", 2]},
-		)
-		if lab_test:
-			frappe.throw(
-				_("Lab Test {0} already created from service request {1}").format(
-					frappe.bold(get_link_to_form("Lab Test", lab_test)),
-					frappe.bold(get_link_to_form("Service Request", self.service_request)),
-				),
-				title=_("Already Exist"),
+	def before_insert(self):
+		if self.service_request:
+			lab_test = frappe.db.exists(
+				"Lab Test",
+				{"service_request": self.service_request, "docstatus": ["!=", 2]},
 			)
+			if lab_test:
+				frappe.throw(
+					_("Lab Test {0} already created from service request {1}").format(
+						frappe.bold(get_link_to_form("Lab Test", lab_test)),
+						frappe.bold(get_link_to_form("Service Request", self.service_request)),
+					),
+					title=_("Already Exist"),
+				)
+
 
 def create_test_from_template(lab_test):
 	template = frappe.get_doc("Lab Test Template", lab_test.template)
@@ -206,12 +206,7 @@ def create_lab_test_from_invoice(sales_invoice):
 				template = get_lab_test_template(item.item_code)
 				if template:
 					lab_test = create_lab_test_doc(
-						invoice.ref_practitioner,
-						patient,
-						template,
-						invoice.company,
-						True,
-						item.service_unit
+						invoice.ref_practitioner, patient, template, invoice.company, True, item.service_unit
 					)
 					if item.reference_dt == "Service Request":
 						lab_test.service_request = item.reference_dn

@@ -7,8 +7,8 @@ import json
 
 import frappe
 from frappe import _
-from six import string_types
 from frappe.utils import now_datetime
+from six import string_types
 
 from healthcare.controllers.service_request_controller import ServiceRequestController
 
@@ -94,6 +94,7 @@ class MedicationRequest(ServiceRequestController):
 def set_medication_request_status(medication_request, status):
 	frappe.db.set_value("Medication Request", medication_request, "status", status)
 
+
 @frappe.whitelist()
 def make_nursing_task(medication_request, healthcare_activity=None):
 	if isinstance(medication_request, string_types):
@@ -101,7 +102,9 @@ def make_nursing_task(medication_request, healthcare_activity=None):
 		medication_request = frappe._dict(medication_request)
 
 	doc = frappe.new_doc("Nursing Task")
-	doc.activity = healthcare_activity if healthcare_activity else medication_request.healthcare_activity
+	doc.activity = (
+		healthcare_activity if healthcare_activity else medication_request.healthcare_activity
+	)
 	doc.service_doctype = "Medication Request"
 	doc.service_name = medication_request.name
 	doc.medical_department = medication_request.medical_department

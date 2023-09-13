@@ -63,9 +63,9 @@ doctype_js = {"Sales Invoice": "public/js/sales_invoice.js"}
 # add methods and filters to jinja environment
 jinja = {
 	"methods": [
-        "healthcare.healthcare.doctype.diagnostic_report.diagnostic_report.diagnostic_report_print",
-        "healthcare.healthcare.utils.generate_barcodes",
-        ]
+		"healthcare.healthcare.doctype.diagnostic_report.diagnostic_report.diagnostic_report_print",
+		"healthcare.healthcare.utils.generate_barcodes",
+	]
 }
 
 # Installation
@@ -128,9 +128,9 @@ doc_events = {
 	"Patient": {
 		"after_insert": "healthcare.regional.india.abdm.utils.set_consent_attachment_details"
 	},
-    "Payment Entry": {
+	"Payment Entry": {
 		"on_submit": "healthcare.healthcare.custom_doctype.payment_entry.set_paid_amount_in_treatment_counselling"
-	}
+	},
 }
 
 scheduler_events = {
@@ -140,7 +140,7 @@ scheduler_events = {
 	],
 	"daily": [
 		"healthcare.healthcare.doctype.patient_appointment.patient_appointment.update_appointment_status",
-        "healthcare.healthcare.doctype.inpatient_record.inpatient_record.add_occupied_service_unit_in_ip_to_billables",
+		"healthcare.healthcare.doctype.inpatient_record.inpatient_record.add_occupied_service_unit_in_ip_to_billables",
 		"healthcare.healthcare.doctype.fee_validity.fee_validity.update_validity_status",
 	],
 }

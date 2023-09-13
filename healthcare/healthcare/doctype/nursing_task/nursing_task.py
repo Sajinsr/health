@@ -19,7 +19,6 @@ class NursingTask(Document):
 
 		self.age = frappe.get_doc("Patient", self.patient).get_age()
 
-
 	def validate(self):
 		if self.status == "Requested":
 			# auto submit if status is Requested

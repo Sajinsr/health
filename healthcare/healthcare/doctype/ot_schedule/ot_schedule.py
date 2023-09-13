@@ -1,13 +1,12 @@
 # Copyright (c) 2023, healthcare and contributors
 # For license information, please see license.txt
 
-import frappe
 import json
+
+import frappe
 from frappe import _, msgprint
 from frappe.model.document import Document
-from frappe.utils import get_datetime, get_weekday, get_time
-
-from healthcare.healthcare.doctype.patient_appointment.test_patient_appointment import create_appointment
+from frappe.utils import get_datetime, get_time, get_weekday
 
 
 class OTSchedule(Document):
@@ -16,7 +15,10 @@ class OTSchedule(Document):
 			for sched in self.procedure_schedules:
 				if not sched.appointment_reference:
 					create_appointment(self, sched)
-			msgprint(_("Appointment Booked"),alert=True,)
+			msgprint(
+				_("Appointment Booked"),
+				alert=True,
+			)
 
 	def on_update_after_submit(self):
 		if self.procedure_schedules:
@@ -25,10 +27,14 @@ class OTSchedule(Document):
 					create_appointment(self, sched)
 				else:
 					update_appointment(sched)
-			msgprint(_("Appointment Updated"),alert=True,)
+			msgprint(
+				_("Appointment Updated"),
+				alert=True,
+			)
 
 	def validate(self):
 		validate_practitioner_schedule(self)
+
 
 @frappe.whitelist()
 def get_service_requests(date):
@@ -45,10 +51,14 @@ def set_procedure_schedule(service_requests):
 	for serv in service_requests:
 		service_request_doc = frappe.get_doc("Service Request", serv)
 		return_dict = {
-			"practitioner": service_request_doc.referred_to_practitioner if service_request_doc.referred_to_practitioner else service_request_doc.practitioner,
+			"practitioner": service_request_doc.referred_to_practitioner
+			if service_request_doc.referred_to_practitioner
+			else service_request_doc.practitioner,
 			"patient": service_request_doc.patient,
 			"clinical_procedure_template": service_request_doc.template_dn,
-			"total_duration": frappe.db.get_value('Clinical Procedure Template', service_request_doc.template_dn, 'total_duration'),
+			"total_duration": frappe.db.get_value(
+				"Clinical Procedure Template", service_request_doc.template_dn, "total_duration"
+			),
 			"service_request": serv,
 		}
 		return_list.append(return_dict)
@@ -105,10 +115,12 @@ def validate_practitioner_schedule(self):
 			pract_schedules = frappe.get_all(
 				"Practitioner Service Unit Schedule",
 				filters={"parent": sched.practitioner},
-				pluck="schedule", as_list=False
+				pluck="schedule",
+				as_list=False,
 			)
 			weekday = get_weekday(get_datetime(self.schedule_date))
-			pract_sched_data = frappe.db.sql("""
+			pract_sched_data = frappe.db.sql(
+				"""
 					SELECT
 						min(from_time) as from_time,
 						max(to_time) as to_time
@@ -118,17 +130,25 @@ def validate_practitioner_schedule(self):
 						parent in ({pract_schedules}) AND day = {weekday}
 					GROUP BY
 						day
-				"""
-				.format(
+				""".format(
 					pract_schedules=",".join(["%s"] * len(pract_schedules)),
 					weekday=frappe.db.escape(weekday),
-				), tuple(pract_schedules), as_dict=True
+				),
+				tuple(pract_schedules),
+				as_dict=True,
 			)
-			if pract_sched_data[0] and get_time(pract_sched_data[0].get("from_time")) > get_time(sched.get("from_time")):
+			if pract_sched_data[0] and get_time(pract_sched_data[0].get("from_time")) > get_time(
+				sched.get("from_time")
+			):
 				validate = True
-			if pract_sched_data[0] and get_time(pract_sched_data[0].get("to_time")) < get_time(sched.get("to_time")):
+			if pract_sched_data[0] and get_time(pract_sched_data[0].get("to_time")) < get_time(
+				sched.get("to_time")
+			):
 				validate = True
 			if validate:
 				pract_list.append(sched.get("practitioner"))
 	if validate:
-		frappe.throw(_("Practitioners {0} not available in the OT schedule time").format(pract_list), title=_("Not Available"))
+		frappe.throw(
+			_("Practitioners {0} not available in the OT schedule time").format(pract_list),
+			title=_("Not Available"),
+		)
