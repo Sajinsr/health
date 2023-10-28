@@ -84,6 +84,39 @@ class TestPatientAppointment(FrappeTestCase):
 			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"), appointment.paid_amount
 		)
 
+	def test_auto_invoicing_with_discount(self):
+		patient, practitioner = create_healthcare_docs()
+		frappe.db.set_single_value("Healthcare Settings", "enable_free_follow_ups", 0)
+		frappe.db.set_single_value("Healthcare Settings", "show_payment_popup", 0)
+		appointment = create_appointment(patient, practitioner, nowdate())
+		self.assertEqual(
+			frappe.db.get_value("Patient Appointment", appointment.name, "invoiced"), 0
+		)
+
+		frappe.db.set_single_value("Healthcare Settings", "show_payment_popup", 1)
+		appointment = create_appointment(
+			patient, practitioner, add_days(nowdate(), 2), invoice=1, discount_amount=100
+		)
+		self.assertEqual(
+			frappe.db.get_value("Patient Appointment", appointment.name, "invoiced"), 1
+		)
+		sales_invoice_name = frappe.db.get_value(
+			"Sales Invoice Item", {"reference_dn": appointment.name}, "parent"
+		)
+		self.assertTrue(sales_invoice_name)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", sales_invoice_name, "company"),
+			appointment.company,
+		)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", sales_invoice_name, "patient"),
+			appointment.patient,
+		)
+		self.assertEqual(
+			frappe.db.get_value("Sales Invoice", sales_invoice_name, "paid_amount"),
+			(appointment.paid_amount - 100),
+		)
+
 	def test_auto_invoicing_based_on_practitioner_department(self):
 		patient, practitioner = create_healthcare_docs()
 		frappe.db.set_value(
@@ -600,6 +633,7 @@ def create_appointment(
 	department=None,
 	appointment_based_on_check_in=None,
 	appointment_time=None,
+	discount_amount=0,
 ):
 	item = create_healthcare_service_items()
 	frappe.db.set_single_value("Healthcare Settings", "inpatient_visit_charge_item", item)
@@ -626,7 +660,7 @@ def create_appointment(
 	if save:
 		appointment.save(ignore_permissions=True)
 		if invoice or frappe.db.get_single_value("Healthcare Settings", "show_payment_popup"):
-			invoice_appointment(appointment.name)
+			invoice_appointment(appointment.name, discount_amount)
 
 	return appointment
 
