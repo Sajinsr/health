@@ -1,0 +1,249 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2023-12-14 11:50:24.420570",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "patient",
+  "patient_name",
+  "column_break_hvqb",
+  "company",
+  "date",
+  "time",
+  "status",
+  "section_break_mvsg",
+  "performer",
+  "occurence_time",
+  "column_break_zwji",
+  "is_sub_potent",
+  "sub_potent_reason",
+  "medication_specifications_section",
+  "route",
+  "dosage_form",
+  "column_break_smll",
+  "quantity",
+  "dosage",
+  "references_section",
+  "inpatient_record",
+  "column_break_zpbh",
+  "medication_request",
+  "section_break_rjje",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_rjje",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Medication Administration",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "HLC-MA-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "HLC-MA-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hvqb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Time",
+   "reqd": 1
+  },
+  {
+   "fieldname": "patient",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Patient",
+   "options": "Patient",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "patient.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "label": "Patient Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "In Progress\nNot Done\nOn Hold\nCompleted\nEntered in Error\nStopped\nUnknown"
+  },
+  {
+   "fieldname": "references_section",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
+   "fieldname": "inpatient_record",
+   "fieldtype": "Link",
+   "label": "Inpatient Record",
+   "options": "Inpatient Record"
+  },
+  {
+   "fieldname": "medication_request",
+   "fieldtype": "Link",
+   "label": "Medication Request",
+   "options": "Medication Request"
+  },
+  {
+   "fieldname": "section_break_mvsg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Now",
+   "fieldname": "occurence_time",
+   "fieldtype": "Datetime",
+   "label": "Occurence Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_sub_potent",
+   "fieldtype": "Check",
+   "label": "Is Sub Potent"
+  },
+  {
+   "fieldname": "column_break_zwji",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.is_sub_potent == 1;",
+   "fieldname": "sub_potent_reason",
+   "fieldtype": "Small Text",
+   "label": "Sub Potent Reason",
+   "mandatory_depends_on": "eval: doc.is_sub_potent == 1;"
+  },
+  {
+   "fieldname": "column_break_zpbh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "performer",
+   "fieldtype": "Link",
+   "label": "Performer",
+   "options": "Healthcare Practitioner"
+  },
+  {
+   "fieldname": "medication_specifications_section",
+   "fieldtype": "Section Break",
+   "label": "Medication Specifications"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Link",
+   "label": "Route",
+   "options": "FHIR Value Set"
+  },
+  {
+   "fetch_from": "medication_request.dosage_form",
+   "fieldname": "dosage_form",
+   "fieldtype": "Link",
+   "label": "Dosage Form",
+   "options": "Dosage Form"
+  },
+  {
+   "fieldname": "column_break_smll",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "label": "Quantity"
+  },
+  {
+   "fetch_from": "medication_request.dosage",
+   "fieldname": "dosage",
+   "fieldtype": "Link",
+   "label": "Dosage",
+   "options": "Prescription Dosage"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2023-12-26 15:17:36.981497",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Medication Administration",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Nursing User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

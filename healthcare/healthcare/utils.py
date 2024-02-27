@@ -17,8 +17,10 @@ from frappe.utils.formatters import format_value
 from healthcare.healthcare.doctype.fee_validity.fee_validity import create_fee_validity
 from healthcare.healthcare.doctype.healthcare_settings.healthcare_settings import (
 	get_income_account,
+	get_account,
 )
 from healthcare.healthcare.doctype.lab_test.lab_test import create_multiple
+from healthcare.healthcare.doctype.nursing_task.nursing_task import create_nursing_tasks_from_medication_request
 from healthcare.setup import setup_healthcare
 
 from healthcare.healthcare.doctype.observation.observation import add_observation
@@ -545,13 +547,22 @@ def manage_invoice_validate(doc, method):
 
 def manage_invoice_submit_cancel(doc, method):
 	if doc.items:
+		items_for_medication_requests = []
 		for item in doc.items:
 			if item.get("reference_dt") and item.get("reference_dn"):
 				# TODO check
 				# if frappe.get_meta(item.reference_dt).has_field("invoiced"):
 				set_invoiced(item, method, doc.name)
+				if item.get("reference_dt") == "Medication Request" and item.get("reference_dn") and frappe.db.get_value("Medication Request", item.get("reference_dn"), "inpatient_record"):
+					items_for_medication_requests.append(item)
+
 		if method == "on_submit":
 			create_sample_collection_and_observation(doc)
+
+			if items_for_medication_requests:
+				make_stock_entry_for_medication_requests(doc, items_for_medication_requests)
+				for item in items_for_medication_requests:
+					create_nursing_tasks_from_medication_request(item.get("reference_dn"))
 
 	if method == "on_submit" and frappe.db.get_single_value(
 		"Healthcare Settings", "create_lab_test_on_si_submit"
@@ -1309,3 +1320,108 @@ def generate_barcodes(in_val):
 	stream.close()
 
 	return barcode_base64
+
+
+def make_stock_entry_for_medication_requests(doc, items_for_medication_requests):
+	pharmacy_warehouse = frappe.db.get_value(
+		"Healthcare Settings Warehouse",
+		{
+			"company": doc.company,
+			"parenttype": "Healthcare Settings",
+			"parent": "Healthcare Settings",
+			"parentfield": "warehouses",
+		},
+		"default_pharmacy_warehouse",
+	)
+	stock_entry = frappe.new_doc("Stock Entry")
+	stock_entry.purpose = "Material Transfer"
+	stock_entry.set_stock_entry_type()
+	stock_entry.from_warehouse = pharmacy_warehouse
+	stock_entry.company = doc.company
+	cost_center = frappe.get_cached_value("Company", doc.company, "cost_center")
+	expense_account = get_account(None, "expense_account", "Healthcare Settings", doc.company)
+	for item in items_for_medication_requests:
+		medication_request = frappe.get_doc("Medication Request", item.get("reference_dn"))
+		to_warehouse = get_warehouse_from_service_unit(
+			medication_request.inpatient_record, doc.company
+		)
+
+		se_child = stock_entry.append("items")
+		se_child.item_code = medication_request.medication_item
+		se_child.item_name = frappe.db.get_value(
+			"Item", medication_request.medication_item, "stock_uom"
+		)
+		se_child.uom = frappe.db.get_value(
+			"Item", medication_request.medication_item, "stock_uom"
+		)
+		se_child.stock_uom = se_child.uom
+		se_child.qty = get_item_qty_from_dosage(medication_request.dosage)
+		se_child.s_warehouse = pharmacy_warehouse
+		se_child.t_warehouse = to_warehouse
+		se_child.to_inpatient_record = medication_request.inpatient_record
+		se_child.medication_request = medication_request.name
+		# in stock uom
+		se_child.conversion_factor = 1
+		se_child.cost_center = cost_center
+		se_child.expense_account = expense_account
+	stock_entry.insert(ignore_permissions=True)
+	stock_entry.submit()
+
+	if stock_entry.name:
+		frappe.msgprint(_(f"Stock Entry {frappe.bold(stock_entry.name)} created"), alert=True)
+
+
+def get_item_qty_from_dosage(dosage):
+	if not dosage:
+		return 1
+
+	qty = frappe.db.get_all(
+		"Dosage Strength",
+		filters={
+			"parent": dosage,
+			"parenttype": "Prescription Dosage",
+			"parentfield": "dosage_strength",
+			"strength_time": [">=", frappe.utils.nowtime()],
+		},
+		fields=["sum(strength) as qty"],
+	)
+
+	return qty[0].qty if qty else 1
+
+
+def get_warehouse_from_service_unit(inpatient_record, company):
+	if not inpatient_record:
+		return
+
+	warehouse = frappe.db.get_value(
+		"Healthcare Settings Warehouse",
+		{
+			"company": company,
+			"parenttype": "Healthcare Settings",
+			"parent": "Healthcare Settings",
+			"parentfield": "warehouses",
+		},
+		"default_service_unit_warehouse",
+	)
+
+	service_units = frappe.db.sql(f"""
+		select io.service_unit, su.warehouse
+		from `tabInpatient Occupancy` as io left join
+			`tabHealthcare Service Unit` as su on su.name=io.service_unit
+		where io.parent={frappe.db.escape(inpatient_record)} and
+			io.left=0 and
+			su.is_ot=0 and
+			su.warehouse IS NOT NULL
+	""",
+		as_dict=True,
+	)
+
+	if service_units:
+		warehouse = service_units[0].warehouse
+
+	if not warehouse:
+		frappe.throw(
+			_("Please configure default service unit warehouse in healthcare settings")
+		)
+
+	return warehouse

@@ -153,17 +153,19 @@ def create_nursing_tasks_from_medication_request(medication):
 		return
 
 	medication_request = frappe.get_doc("Medication Request", medication)
-	if medication_request.docstatus == 1 and medication_request.dosage and medication_request.period:
+	if medication_request.inpatient_record and medication_request.dosage and medication_request.period:
 		period = frappe.db.get_value(
 			"Prescription Duration", medication_request.period, "number"
 		)
-		settings = frappe.get_single("Healthcare Settings")
+		default_medication_activity = frappe.db.get_single_value(
+			"Healthcare Settings", "default_medication_activity"
+		)
 
 		if period >= frappe.db.count(
 			"Nursing Task",
 			{
 				"docstatus": ["!=", 2],
-				"activity": settings.default_medication_activity,
+				"activity": default_medication_activity,
 				"service_doctype": "Medication Request",
 				"service_name": medication_request.name,
 			},
@@ -190,12 +192,12 @@ def create_nursing_tasks_from_medication_request(medication):
 						"company": medication_request.company,
 						"patient": medication_request.patient,
 						"requested_start_time": f"{getdate()} {dose.strength_time}",
-						"activity": settings.default_medication_activity,
+						"activity": default_medication_activity,
 					},
 				)
 				if not exists:
 					doc = frappe.new_doc("Nursing Task")
-					doc.activity = settings.default_medication_activity
+					doc.activity = default_medication_activity
 					doc.service_doctype = "Medication Request"
 					doc.service_name = medication_request.name
 					doc.medical_department = medication_request.medical_department
@@ -211,103 +213,23 @@ def create_nursing_tasks_from_medication_request(medication):
 					doc.description = medication_request.order_description
 					doc.save()
 
-			if settings.default_pharmacy_warehouse and medication_request.inpatient_record:
-				make_stock_entry_for_medication(medication_request, settings.default_pharmacy_warehouse)
-
-
 
 def create_nursing_task_for_inpatient_record():
-	inpatient_records = frappe.db.get_all("Inpatient Record", filters={"status": "Admitted"}, pluck="name")
+	inpatient_records = frappe.db.get_all(
+		"Inpatient Record", filters={"status": "Admitted"}, pluck="name"
+	)
 
 	for record in inpatient_records:
 		record_doc = frappe.get_doc("Inpatient Record", record)
-		medication_requests = frappe.db.get_all("Medication Request", filters={
-			"inpatient_record": record_doc.name,
-			"patient": record_doc.patient
-		}, pluck="name")
+		medication_requests = frappe.db.get_all(
+			"Medication Request",
+			filters={
+				"inpatient_record": record_doc.name,
+				"patient": record_doc.patient,
+				"docstatus": 1,
+			},
+			pluck="name",
+		)
 
 		for medication_request in medication_requests:
 			create_nursing_tasks_from_medication_request(medication_request)
-
-
-def make_stock_entry_for_medication(medication_request, pharmacy_warehouse=None):
-	if not pharmacy_warehouse:
-		return
-
-	if medication_request.medication_item:
-		to_warehouse = get_warehouse_from_service_unit(medication_request.inpatient_record)
-		if not to_warehouse:
-			return
-
-		stock_entry = frappe.new_doc("Stock Entry")
-		stock_entry.purpose = "Material Transfer"
-		stock_entry.set_stock_entry_type()
-		stock_entry.from_warehouse = pharmacy_warehouse
-		stock_entry.to_warehouse = to_warehouse
-		stock_entry.company = medication_request.company
-		cost_center = frappe.get_cached_value("Company", medication_request.company, "cost_center")
-		expense_account = get_account(None, "expense_account", "Healthcare Settings", medication_request.company)
-
-		se_child = stock_entry.append("items")
-		se_child.item_code = medication_request.medication_item
-		se_child.item_name = frappe.db.get_value("Item", medication_request.medication_item, "stock_uom")
-		se_child.uom = frappe.db.get_value("Item", medication_request.medication_item, "stock_uom")
-		se_child.stock_uom = se_child.uom
-		se_child.qty = get_item_qty_from_dosage(medication_request.dosage)
-		se_child.s_warehouse = pharmacy_warehouse
-		se_child.t_warehouse = to_warehouse
-		se_child.to_inpatient_record = medication_request.inpatient_record
-		# in stock uom
-		se_child.conversion_factor = 1
-		se_child.cost_center = cost_center
-		se_child.expense_account = expense_account
-		stock_entry.save()
-		stock_entry.submit()
-
-
-def get_item_qty_from_dosage(dosage):
-	if not dosage:
-		return 1
-
-	qty = frappe.db.get_all(
-		"Dosage Strength",
-		filters={
-			"parent": dosage,
-			"parenttype": "Prescription Dosage",
-			"parentfield": "dosage_strength",
-			"strength_time": [">=", frappe.utils.nowtime()]
-		},
-		fields=["sum(strength) as qty"]
-	)
-
-	return qty[0].qty if qty else 1
-
-
-def get_warehouse_from_service_unit(inpatient_record):
-	if not inpatient_record:
-		return
-	warehouse = None
-	print("\n\n\n\n11111", f"""
-		select io.service_unit
-		from `tabInpatient Occupancy` as io left join
-			`tabHealthcare Service Unit` as su on su.name=io.service_unit
-		where io.parent={frappe.db.escape(inpatient_record)} and
-			io.left=0 and
-			su.is_ot=0
-	""")
-	service_units = frappe.db.sql(f"""
-		select io.service_unit
-		from `tabInpatient Occupancy` as io left join
-			`tabHealthcare Service Unit` as su on su.name=io.service_unit
-		where io.parent={frappe.db.escape(inpatient_record)} and
-			io.left=0 and
-			su.is_ot=0
-	""", as_dict=True)
-
-	print("\n\n\n\nservice", service_units)
-	if service_units:
-		warehouse = frappe.db.get_value("Healthcare Service Unit", service_units[0].service_unit, "warehouse")
-	if not warehouse:
-		warehouse = frappe.db.get_single_value("Healthcare Settings", "default_service_unit_warehouse")
-
-	return warehouse

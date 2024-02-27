@@ -21,12 +21,12 @@
   "valid_days",
   "inpatient_settings_section",
   "default_medication_activity",
-  "default_pharmacy_warehouse",
   "allow_discharge_despite_unbilled_services",
   "do_not_bill_inpatient_encounters",
   "column_break_cikp",
-  "default_service_unit_warehouse",
   "automatically_generate_billable",
+  "default_warehouses_section",
+  "warehouses",
   "laboratory_tab",
   "sb_lab_settings",
   "create_lab_test_on_si_submit",
@@ -393,22 +393,21 @@
    "options": "Healthcare Activity"
   },
   {
-   "description": "Used when auto creating stock entry for nursing task",
-   "fieldname": "default_pharmacy_warehouse",
-   "fieldtype": "Link",
-   "label": "Default Pharmacy Warehouse",
-   "options": "Warehouse"
+   "fieldname": "default_warehouses_section",
+   "fieldtype": "Section Break",
+   "label": "Default Warehouses",
+   "options": "Healthcare Settings Warehouse"
   },
   {
-   "fieldname": "default_service_unit_warehouse",
-   "fieldtype": "Link",
-   "label": "Default Service Unit Warehouse",
-   "options": "Warehouse"
+   "fieldname": "warehouses",
+   "fieldtype": "Table",
+   "label": "Warehouses",
+   "options": "Healthcare Settings Warehouse"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2023-12-07 08:51:47.886272",
+ "modified": "2023-12-13 13:55:39.412540",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Healthcare Settings",

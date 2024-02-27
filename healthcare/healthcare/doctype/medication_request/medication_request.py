@@ -30,9 +30,9 @@ class MedicationRequest(ServiceRequestController):
 		if self.amended_from:
 			frappe.db.set_value("Medication Request", self.amended_from, "status", "Replaced")
 
-	def after_insert(self):
-		if self.inpatient_record and frappe.db.get_value("Inpatient Record", self.inpatient_record, "status") == "Admitted":
-			create_nursing_tasks_from_medication_request(self.name)
+	# def after_insert(self):
+	# 	if self.inpatient_record and frappe.db.get_value("Inpatient Record", self.inpatient_record, "status") == "Admitted":
+	# 		create_nursing_tasks_from_medication_request(self.name)
 
 	def set_order_details(self):
 		if not self.medication:

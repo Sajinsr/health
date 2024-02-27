@@ -503,9 +503,6 @@ def admit_patient(inpatient_record, service_unit, check_in, expected_discharge=N
 		{"inpatient_status": "Admitted", "inpatient_record": inpatient_record.name},
 	)
 
-	medication_requests = frappe.db.get_all("Medication Request", {"inpatient_record": inpatient_record.name, "patient": inpatient_record.patient}, ["name"])
-	for medication_request in medication_requests:
-		create_nursing_tasks_from_medication_request(medication_request.name)
 
 def transfer_patient(inpatient_record, service_unit, check_in, txred=0):
 	if any((inpat_occup.service_unit == service_unit and inpat_occup.left==0) for inpat_occup in inpatient_record.inpatient_occupancies):
@@ -747,6 +744,9 @@ def insert_pending_service_request(doc):
 
 def create_orders_from_treatment_counselling(doc):
 	treatment_councelling = frappe.db.get_value("Treatment Counselling", {"inpatient_record": doc.name, "status": "Completed"}, "name")
+	if not treatment_councelling:
+		return
+
 	tc_doc = frappe.get_doc("Treatment Counselling", treatment_councelling)
 	create_orders = False
 	for item in tc_doc.treatment_plan_template_items:
