@@ -98,6 +98,6 @@ jobs:
           BRANCH_TO_CLONE: ${{ env.FH_BRANCH }}
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app healthcare
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app marley_health
         env:
           TYPE: server

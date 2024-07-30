@@ -3,7 +3,7 @@
 *.egg-info
 *.swp
 tags
-healthcare/docs/current
+marley_health/docs/current
 __pycache__/
 dist/
 node_modules/

@@ -1,5 +1,5 @@
 [project]
-name = "healthcare"
+name = "marley_health"
 description = "Modern, Open Source HIS built on Frappe and ERPNext"
 authors = [
     { name = "earthians Health Informatics Pvt. Ltd.", email = "info@earthianslive.com" },
@@ -31,5 +31,5 @@ ensure_newline_before_comments = true
 indent = "\t"
 known_frappe = ["frappe"]
 known_erpnext = ["erpnext"]
-known_healthcare = ["healthcare"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FRAPPE", "ERPNEXT", "HEALTHCARE", "FIRSTPARTY", "LOCALFOLDER"]
+known_healthcare = ["marley_health"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FRAPPE", "ERPNEXT", "Marley Health", "FIRSTPARTY", "LOCALFOLDER"]

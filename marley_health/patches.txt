@@ -1,0 +1,21 @@
+[pre_model_sync]
+marley_health.patches.v0_0.setup_abdm_custom_fields
+marley_health.patches.v0_0.set_medical_code_from_field_to_codification_table
+marley_health.patches.v15_0.check_version_compatibility_with_frappe
+marley_health.patches.v15_0.set_fee_validity_status
+marley_health.patches.v15_0.create_custom_fields_in_sales_invoice_item
+marley_health.patches.v15_0.rename_automate_appointment_invoicing
+marley_health.patches.v15_0.rename_medical_code_standard_and_medical_code
+marley_health.patches.v15_0.setup_service_request
+marley_health.patches.v15_0.change_app_name_to_marley_health
+marley_health.patches.v15_0.rename_healthcare_module_references
+
+[post_model_sync]
+marley_health.patches.v15_0.rename_field_medical_department_in_appoitment_type_service_item
+marley_health.patches.v15_0.set_default_dynamic_link_dt_for_appointment_type_service_item
+marley_health.patches.v15_0.set_allow_booking_for_in_appointment_type
+marley_health.patches.v15_0.setup_basic_code_systems
+marley_health.patches.v15_0.setup_diagnostic_module_codes
+marley_health.patches.v15_0.setup_order_status_codes
+execute:frappe.delete_doc("Workspace", "Healthcare", force=True)
+execute:frappe.delete_doc("Module Def", "Healthcare")

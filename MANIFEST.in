@@ -3,15 +3,15 @@ include *.json
 include *.md
 include *.py
 include *.txt
-recursive-include healthcare *.css
-recursive-include healthcare *.csv
-recursive-include healthcare *.html
-recursive-include healthcare *.ico
-recursive-include healthcare *.js
-recursive-include healthcare *.json
-recursive-include healthcare *.md
-recursive-include healthcare *.png
-recursive-include healthcare *.py
-recursive-include healthcare *.svg
-recursive-include healthcare *.txt
-recursive-exclude healthcare *.pyc
+recursive-include marley_health *.css
+recursive-include marley_health *.csv
+recursive-include marley_health *.html
+recursive-include marley_health *.ico
+recursive-include marley_health *.js
+recursive-include marley_health *.json
+recursive-include marley_health *.md
+recursive-include marley_health *.png
+recursive-include marley_health *.py
+recursive-include marley_health *.svg
+recursive-include marley_health *.txt
+recursive-exclude marley_health *.pyc

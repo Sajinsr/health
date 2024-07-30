@@ -42,7 +42,7 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app payments
 bench get-app https://github.com/frappe/erpnext --branch "$BRANCH_TO_CLONE"
-bench get-app healthcare "${GITHUB_WORKSPACE}"
+bench get-app https://github.com/earthians/marley.git "${GITHUB_WORKSPACE}"
 
 bench setup requirements --dev
 CI=Yes bench build --app frappe &
@@ -51,6 +51,6 @@ bench start &> bench_run_logs.txt &
 
 bench --site test_site reinstall --yes
 
-bench --verbose --site test_site install-app healthcare
+bench --verbose --site test_site install-app marley_health
 
 
