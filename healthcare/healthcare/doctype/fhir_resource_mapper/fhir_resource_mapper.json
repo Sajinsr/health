@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{version}-{document_type}",
+ "creation": "2024-08-28 12:53:24.692808",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "version",
+  "column_break_qrwk",
+  "document_type",
+  "resource_type",
+  "section_break_ivgn",
+  "data"
+ ],
+ "fields": [
+  {
+   "fieldname": "version",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "FHIR Version",
+   "options": "FHIR Version",
+   "reqd": 1
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Table",
+   "label": "Data",
+   "options": "FHIR Resource Map"
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Document Type",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_qrwk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_ivgn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resource_type",
+   "fieldtype": "Link",
+   "label": "Resource Type",
+   "options": "Resource Type",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-09-11 10:48:21.863961",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "FHIR Resource Mapper",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

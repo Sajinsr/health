@@ -63,7 +63,11 @@
   "laboratory_sms_alerts",
   "sms_printed",
   "column_break_28",
-  "sms_emailed"
+  "sms_emailed",
+  "column_break_fipy",
+  "fhir_tab",
+  "fhir_capable",
+  "fhir_version"
  ],
  "fields": [
   {
@@ -421,11 +425,33 @@
   {
    "fieldname": "column_break_bkvx",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_fipy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "fhir_capable",
+   "fieldtype": "Check",
+   "label": "FHIR Capable"
+  },
+  {
+   "fieldname": "fhir_version",
+   "fieldtype": "Link",
+   "label": "FHIR Version",
+   "mandatory_depends_on": "fhir_capable",
+   "options": "FHIR Version"
+  },
+  {
+   "fieldname": "fhir_tab",
+   "fieldtype": "Tab Break",
+   "label": "FHIR"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2024-04-30 14:09:19.163643",
+ "modified": "2024-09-25 16:51:32.508731",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Healthcare Settings",
