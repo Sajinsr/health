@@ -437,10 +437,11 @@
    "label": "FHIR Capable"
   },
   {
+   "depends_on": "eval: doc.fhir_capable",
    "fieldname": "fhir_version",
    "fieldtype": "Link",
    "label": "FHIR Version",
-   "mandatory_depends_on": "fhir_capable",
+   "mandatory_depends_on": "eval: doc.fhir_capable",
    "options": "FHIR Version"
   },
   {
@@ -451,7 +452,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2024-09-25 16:51:32.508731",
+ "modified": "2024-09-30 14:33:34.577730",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Healthcare Settings",

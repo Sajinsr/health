@@ -7,8 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "version",
-  "json",
-  "fhir_datatype"
+  "json"
  ],
  "fields": [
   {
@@ -21,17 +20,11 @@
    "fieldname": "json",
    "fieldtype": "Code",
    "label": "Json"
-  },
-  {
-   "fieldname": "fhir_datatype",
-   "fieldtype": "Table",
-   "label": "FHIR Datatype",
-   "options": "FHIR Data Types"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-24 12:23:15.112779",
+ "modified": "2024-09-30 14:34:06.106050",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "FHIR Version",

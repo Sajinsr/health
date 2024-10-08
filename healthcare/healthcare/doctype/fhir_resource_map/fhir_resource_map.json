@@ -6,9 +6,11 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "resource_field",
+  "doc_field",
+  "parent_docfield",
   "column_break_kekd",
-  "doc_field"
+  "resource_field",
+  "parent_resource_field"
  ],
  "fields": [
   {
@@ -19,19 +21,31 @@
    "fieldname": "doc_field",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "Doc Field"
+   "label": "DocField"
   },
   {
    "fieldname": "resource_field",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Resource Field"
+  },
+  {
+   "fieldname": "parent_resource_field",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parent Resource Field"
+  },
+  {
+   "fieldname": "parent_docfield",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parent Docfield"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-09-26 11:24:26.490517",
+ "modified": "2024-10-07 17:09:05.416471",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "FHIR Resource Map",

@@ -7,23 +7,27 @@
  "engine": "InnoDB",
  "field_order": [
   "resource_name",
-  "json_data"
+  "resource_json"
  ],
  "fields": [
   {
    "fieldname": "resource_name",
    "fieldtype": "Data",
-   "label": "Resource Name"
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Resource Name",
+   "reqd": 1
   },
   {
-   "fieldname": "json_data",
+   "fieldname": "resource_json",
    "fieldtype": "Code",
-   "label": "Resource Data"
+   "label": "Resource JSON",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-19 11:45:07.109941",
+ "modified": "2024-10-01 11:26:50.965904",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Resource Type",

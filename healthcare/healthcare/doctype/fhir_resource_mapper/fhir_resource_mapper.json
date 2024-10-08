@@ -11,27 +11,23 @@
   "document_type",
   "resource_type",
   "section_break_ivgn",
-  "data"
+  "resource_maps"
  ],
  "fields": [
   {
    "fieldname": "version",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "FHIR Version",
    "options": "FHIR Version",
    "reqd": 1
   },
   {
-   "fieldname": "data",
-   "fieldtype": "Table",
-   "label": "Data",
-   "options": "FHIR Resource Map"
-  },
-  {
    "fieldname": "document_type",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Document Type",
    "options": "DocType",
    "reqd": 1
@@ -47,14 +43,22 @@
   {
    "fieldname": "resource_type",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Resource Type",
    "options": "Resource Type",
    "reqd": 1
+  },
+  {
+   "fieldname": "resource_maps",
+   "fieldtype": "Table",
+   "label": "Resource Maps",
+   "options": "FHIR Resource Map"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-11 10:48:21.863961",
+ "modified": "2024-09-30 17:41:42.872193",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "FHIR Resource Mapper",
