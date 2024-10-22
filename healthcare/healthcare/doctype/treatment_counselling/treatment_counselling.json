@@ -21,10 +21,15 @@
   "treatment_plan_template",
   "column_break_qwkn",
   "price_list",
+  "package_details_section",
+  "package",
+  "column_break_vksj",
+  "package_subscription",
   "section_break_7np4",
   "treatment_plan_template_items",
   "section_break_cbcs",
   "amount",
+  "total_amount_payable",
   "outstanding_amount",
   "column_break_1la5",
   "paid_amount",
@@ -291,12 +296,44 @@
    "options": "Treatment Counselling",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval: doc.package",
+   "fieldname": "package_details_section",
+   "fieldtype": "Section Break",
+   "label": "Package Details"
+  },
+  {
+   "fieldname": "package",
+   "fieldtype": "Link",
+   "label": "Package",
+   "options": "Healthcare Package"
+  },
+  {
+   "fieldname": "column_break_vksj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.package",
+   "fieldname": "package_subscription",
+   "fieldtype": "Link",
+   "label": "Package Subscription",
+   "mandatory_depends_on": "eval: doc.package",
+   "options": "Package Subscription"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_amount_payable",
+   "fieldtype": "Currency",
+   "label": "Total Amount Payable",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-04-27 15:42:25.885636",
+ "modified": "2024-10-22 11:03:49.125781",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Treatment Counselling",

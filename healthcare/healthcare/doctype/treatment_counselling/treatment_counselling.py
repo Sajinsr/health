@@ -42,10 +42,18 @@ class TreatmentCounselling(Document):
 		set_treatment_plan_template_items(self)
 		set_total_amount(self)
 
+		self.total_amount_payable = (
+			self.amount
+			if not self.package_subscription
+			else frappe.db.get_value("Package Subscription", self.package_subscription, "total_amount")
+		)
+
 		if self.paid_amount:
-			self.outstanding_amount = self.amount - self.paid_amount
+			self.outstanding_amount = self.total_amount_payable - self.paid_amount
 		else:
-			self.outstanding_amount = self.amount
+			self.outstanding_amount = self.total_amount_payable
+
+		set_subscription_outstandings(self)
 
 	def after_insert(self):
 		if self.admission_encounter:  # Update encounter
@@ -61,10 +69,18 @@ class TreatmentCounselling(Document):
 		if self.status == "Closed" and doc_before_save.status != "Closed" and self.admission_encounter:
 			frappe.db.set_value("Patient Encounter", self.admission_encounter, "inpatient_status", "")
 
+		total_amount_payable = (
+			self.amount
+			if not self.package_subscription
+			else frappe.db.get_value("Package Subscription", self.package_subscription, "total_amount")
+		)
+		self.db_set("total_amount_payable", total_amount_payable)
 		if self.paid_amount:
-			self.db_set("outstanding_amount", self.amount - self.paid_amount)
+			self.db_set("outstanding_amount", total_amount_payable - self.paid_amount)
 		else:
-			self.db_set("outstanding_amount", self.amount)
+			self.db_set("outstanding_amount", total_amount_payable)
+
+		set_subscription_outstandings(self)
 
 	def on_cancel(self):
 		if self.admission_encounter:
@@ -247,3 +263,10 @@ def get_encounter_items(encounter):
 				}
 			)
 	return item_list
+
+
+def set_subscription_outstandings(self):
+	if self.paid_amount:
+		subscription_doc = frappe.get_doc("Package Subscription", self.package_subscription)
+		subscription_doc.paid_amount = self.paid_amount
+		subscription_doc.save()

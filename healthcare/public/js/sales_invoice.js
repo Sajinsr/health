@@ -69,6 +69,12 @@ frappe.ui.form.on('Sales Invoice', {
 
 	items_add: function (frm) {
 		set_service_unit(frm);
+	},
+
+	healthcare_package_subscription: function (frm) {
+		if (frm.doc.healthcare_package_subscription) {
+			add_package_items(frm);
+		}
 	}
 });
 
@@ -356,4 +362,19 @@ var add_to_item_line = function(frm, checked_values, invoice_healthcare_services
 		}
 		frm.refresh_fields();
 	}
+};
+
+var add_package_items = function (frm) {
+	frm.clear_table("items");
+	frappe.call({
+		doc: frm.doc,
+		method: "add_package_items",
+		args:{
+			subscription: frm.doc.healthcare_package_subscription
+		},
+		callback: function() {
+			frm.trigger("validate");
+			frm.refresh_fields();
+		}
+	});
 };

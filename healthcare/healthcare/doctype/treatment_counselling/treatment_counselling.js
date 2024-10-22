@@ -26,6 +26,24 @@ frappe.ui.form.on("Treatment Counselling", {
 			};
 		});
 
+		frm.set_query("package", function () {
+			return {
+				filters: {
+					"disabled": 0,
+				}
+			};
+		});
+
+		frm.set_query("package_subscription", function () {
+			return {
+				filters: {
+					"patient": frm.doc.patient,
+					"healthcare_package": frm.doc.package,
+					"docstatus": 1,
+				}
+			};
+		});
+
 		if (!frm.doc.__islocal) {
 			if (frm.doc.docstatus === 1) {
 				if (frm.doc.encounter_status == "Admission Scheduled" && frm.doc.status == "Active") {
