@@ -1,0 +1,43 @@
+.fc-time-grid .fc-slats td {
+	height: 7em !important;
+	border-bottom: 0;
+}
+.fc-time {
+	font-size: 12px !important;
+}
+.fc-title{
+    font-size: 12px !important;
+}
+.fc.fc-unthemed.fc-ltr {
+	visibility: hidden;
+}
+.text-muted.footnote-area.level {
+	visibility: hidden;
+}
+.calen-btn
+{
+	margin-right: 3px !important;
+	height: 85px;
+	width: 65px;
+	border: 0;
+}
+.fc-prev-button
+{
+	width: 25px;
+}
+.fc-next-button
+{
+	width: 25px;
+}
+td{
+	font-size: 14px;
+	font-weight: 600;
+}
+.fc-show_friday-button
+{
+	width: 80px;
+}
+.fc-hide_friday-button
+{
+	width: 80px;
+}

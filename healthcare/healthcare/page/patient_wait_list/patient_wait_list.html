@@ -1,0 +1,201 @@
+<div class="end_cls">
+<div class="app-listing padding list_margin" data-title="{{ data.name }}">
+	<div class="col-sm-12 rounded_app_details">
+		<div class="col-3 div_lr_padding" style="text-align:center;">
+				<div class="col-sm-12 div_lr_padding ">
+					<a  href="/Patient Appointment/{{ data.name }}"><b>{{ data.name }}</b></a>
+					{% if data.app_content %}
+						<i data-html="true" class="fas fa-comment fa-lg" title="{{ data.app_owner}} ({{ data.app_modified }}):&#013{{ __(app_content) }}" style="font-size: 15px; color:lightskyblue;"></i>
+					{% else %}
+						<i class="fas fa-comment fa-lg" title="No Instructions added yet" style="font-size: 15px; color:#F2F2F2;"></i>
+					{% endif %}
+					{% if data.appointment_type && !data.appointment_type_filter %}
+						<br>{{ data.appointment_type }}
+					{% endif %}
+					{% if data.procedure_template %}
+						<br>{{ data.procedure_template }}
+					{% endif %}
+					{% if data.service_unit && !data.service_unit_filter %}
+						<br>{{ data.service_unit }}
+					{% endif %}
+				</div>
+		</div>
+		<div class="col-3 div_lr_padding" style="text-align:center;">
+			<div col_wrapper>
+					<div col_row> <a href="/Patient/{{ data.patient }}">{{ data.patient_name }}{% if !data.patient_filter %} ({{ data.patient }}){% endif %}</a>
+						{% if data.content %}
+							<i data-html="true" class="fas fa-comment fa-lg" title="{{ data.owner}} ({{ data.modified }}):&#013{{ __(content) }}" style="font-size: 15px; color:lightskyblue;"></i>
+						{% else %}
+							<i class="fas fa-comment fa-lg" title="No Instructions added yet" style="font-size: 15px; color:#F2F2F2;"></i>
+						{% endif %}
+					</div>
+				<p></p>
+				{% if data.practitioner_name %}
+					<div col_row><i class="fa fa-user-md" style="color:#8c8b8b"></i>&nbsp;&nbsp;{{ data.practitioner_name }}</div>
+				{% endif %}
+			</div>
+		</div>
+		<div class="col-3 div_lr_padding" style="text-align:center;">
+			<div col_wrapper>
+				<div col_row>
+					{% if data.status == "Scheduled" || data.status == "Open" || data.status == "Closed" || data.status == "Pending" %}
+						{% if data.status == "Scheduled" %}
+							<button class="ess_btn open" title="{{ __(`Open`) }}" data-name="{{ data.name }}"><i class="fas fa-folder-open" style="color: #696969;"></i></button>
+							<button class="ess_btn cancel" title="{{ __(`Cancel`) }}" data-name="{{ data.name }}"><i class="fas fa-ban" style="color: #696969;"></i></button>
+							<button class="ess_btn reschedule" title="{{ __(`Reschedule`) }}" data-name="{{ data.name }}"
+							data-department="{{ data.department }}" data-practitioner="{{ data.practitioner }}"
+							data-appointment-date="{{ data.appointment_date }}"><i class="fas fa-redo" style="color: #696969;"></i></button>
+						{% endif %}
+						{% if data.status == "Open" %}
+							<button class="ess_btn arrived" title="{{ __(`Arrived`) }}" data-name="{{ data.name }}"><i class="fas fa-check-square" style="color: #696969;"></i></button>
+							<button class="ess_btn cancel" title="{{ __(`Cancel`) }}" data-name="{{ data.name }}"><i class="fas fa-ban" style="color: #696969;"></i></button>
+							<button class="ess_btn noshow" title="{{ __(`No Show`) }}" data-name="{{ data.name }}"><i class="fas fa-eye-slash" style="color: #696969;"></i></button>
+							<button class="ess_btn reschedule" title="{{ __(`Reschedule`) }}" data-name="{{ data.name }}"
+							data-department="{{ data.department }}" data-practitioner="{{ data.practitioner }}"
+							data-appointment-date="{{ data.appointment_date }}"><i class="fas fa-redo" style="color: #696969;"></i></button>
+						{% endif %}
+						{% if data.status == "Closed" %}
+							<button class="ess_btn new_appointment" title="{{ __(`New`) }}" data-name="{{ data.name }}"><i class="fas fa-plus"></i></button>
+							<button class="ess_btn checkout" title="{{ __(`Check Out`) }}" data-name="{{ data.name }}"><i class="fas fa-sign-out-alt" style="color: #696969;"></i></button>
+						{% endif %}
+						{% if data.status == "Pending" %}
+							<button class="ess_btn arrived" title="{{ __(`Arrived`) }}" data-name="{{ data.name }}"><i class="fas fa-check-square" style="color: #696969;"></i></button>
+							<button class="ess_btn noshow" title="{{ __(`No Show`) }}" data-name="{{ data.name }}"><i class="fas fa-eye-slash" style="color: #696969;"></i></button>
+							<button class="ess_btn reschedule" title="{{ __(`Reschedule`) }}" data-name="{{ data.name }}"
+							data-department="{{ data.department }}" data-practitioner="{{ data.practitioner }}"
+							data-appointment-date="{{ data.appointment_date }}"><i class="fas fa-redo" style="color: #696969;"></i></button>
+						{% endif %}
+						<!-- {% if data.status == "Cancelled" %}
+							<button class="ess_btn new_appointment" title="{{ __(`New`) }}" data-name="{{ data.name }}"><i class="fas fa-plus"></i></button>
+						{% endif %}
+						{% if data.status == "No show" %}
+							<button class="ess_btn new_appointment" title="{{ __(`New`) }}" data-name="{{ data.name }}"><i class="fas fa-plus"></i></button>
+						{% endif %} -->
+					{% else %}
+						<p></p>
+					{% endif %}
+				</div>
+				<div col_row>
+					{{ data.status }}
+					{% if data.show_patient_confirmed %}
+							{% if data.patient_confirmed == "1" %}
+								<button class="c_btn patient_confirmed" title="{{ __(`Patient Confirmed`) }}" data-name="{{ data.name }}" action="{{ `Uncheck` }}"><i class="fas fa-check-circle" style="color:green"></i></button>
+							{% endif %}
+							{% if data.patient_confirmed == "0" %}
+								<button class="c_btn patient_confirmed" title="{{ __(`Patient Confirmed`) }}" data-name="{{ data.name }}" action="{{ `Check` }}"><i class="fas fa-times-circle" style="color:orange"></i></button>
+							{% endif %}
+					{% endif %}
+				</div>
+				<div col_row>
+					{% if data.show_mca_payment_status %}
+						{% if data.mca_payment_status == "1" %}
+						<button class="p_btn payment_status" title="{{ __(`Mark as Not Paid`) }}" data-name="{{ data.name }}" action="{{ `Remove` }}"><i class="fas fa-check" style="color:green"></i> Paid</button>
+						{% endif %}
+						{% if data.mca_payment_status == "0" %}
+						<button class="p_btn payment_status" title="{{ __(`Mark as Paid`) }}" data-name="{{ data.name }}" action="{{ `Add` }}"><i class="fas fa-times" style="color:orange"></i> Not Paid</button>
+						{% endif %}
+					{% endif %}
+				</div>
+			</div>
+		</div>
+
+		<div class="col-3 div_lr_padding" style="text-align:center;">
+			<div class="col_row rounded_inner_upper" style="text-align:center;">
+				{% if data.status == "Arrived" %}
+					<button class="ess_btn record-vitals" title="{{ __(`Record Vitals`) }}" data-patient="{{ data.patient }}"><i class="fas fa-notes-medical" style="color: #696969;"></i></button>
+					{% if data.procedure_template %}
+							<button class="ess_btn start-procedure" title="{{ __(`Create Procedure`) }}" data-name="{{ data.name }}"><i class="fas fa-plus-square" style="color: #696969;"></i></button>
+						{% else %}
+							<button class="ess_btn attend" title="{{ __(`Attend`) }}" data-name="{{ data.name }}"><i class="fas fa-stethoscope" style="color: #696969;"></i></button>
+					{% endif %}
+				{% endif %}
+				{% if data.status == "Arrived" %}
+					<button class="ess_btn record-vitals" title="{{ __(`Record Vitals`) }}"  data-patient="{{ data.patient }}"><i class="fas fa-notes-medical" style="color: #696969;"></i></button>
+					{% if data.procedure_template %}
+							<button class="ess_btn update-procedure" title="{{ __(`View`) }}" data-name="{{ data.name }}"><i class="fas fa-eye" style="color: #696969;"></i></button>
+						{% else %}
+							<button class="ess_btn update-encounter" title="{{ __(`View`) }}" data-name="{{ data.name }}"><i class="fas fa-eye" style="color: #696969;"></i></button>
+					{% endif %}
+				{% endif %}
+
+				{% if data.status == "Closed" %}
+					<button class="ess_btn " title="{{ __(`Record Vitals`) }}" style="color: #A9A9A9;"><i class="fas fa-notes-medical"></i></button>
+					{% if data.encounter_status == 1 %}
+							<button class="ess_btn update-encounter" title="{{ __(`View`) }}" data-name="{{ data.name }}" style="color:green"><i class="fas fa-stethoscope"></i></button>
+						{% else %}
+							<button class="ess_btn" title="{{ __(`View`) }}"  style="color: #A9A9A9;"><i class="fas fa-stethoscope"></i></button>
+					{% endif %}
+				{% endif %}
+
+				{% if data.status != "In Progress" && data.status != "Arrived" && data.status != "Closed"%}
+					<button class="ess_btn" title="{{ __(`Record Vitals`) }}" style="color: #A9A9A9;"><i class="fas fa-notes-medical"></i></button>
+					<button class="ess_btn" title="{{ __(`Attend`) }}" data-name="{{ data.name }}" style="color: #A9A9A9;"><i class="fas fa-stethoscope"></i></button>
+				{% endif %}
+					<!-- to enable sales_invoice creation only on status in proggress and arrived -->
+					{% if data.invoiced != 1 && data.status != "Cancelled" && data.status != "No show" && (data.status == "Arrived" || data.status == "In Progress" || data.status == "Open" || data.status == "Closed") %}
+						<button class="ess_btn make-invoice" title="{{ __(`Invoice`) }}" data-name="{{ data.name }}" style="color:red"><i class="fa fa-usd" style="font-size: 12px"></i></button>
+					{% endif %}
+					{% if data.invoiced != 1 && data.status != "Cancelled" && data.status != "Arrived" && data.status != "In Progress" && data.status != "Open" && data.status != "Closed" %}
+						<button class="ess_btn" title="{{ __(`Invoice`) }}" data-name="{{ data.name }}" style="color:#A9A9A9;"><i class="fa fa-usd" style="font-size: 12px"></i></button>
+					{% endif %}
+					{% if data.invoiced == 1 && data.payment == __("Unpaid") && data.status != "Cancelled"  && data.status != "No show" %}
+						<button class="ess_btn view-invoice" title="{{ __(`Unpaid`) }}" data-name="{{ data.name }}" style="color:orange"><i class="fa fa-usd" style="font-size: 12px"></i></button>
+					{% endif %}
+					{% if data.invoiced == 1 && data.payment == __("Overdue") && data.status != "Cancelled"  && data.status != "No show" %}
+						<button class="ess_btn view-invoice" title="{{ __(`Overdue`) }}" data-name="{{ data.name }}" style="color:orange"><i class="fa fa-usd" style="font-size: 12px"></i></button>
+					{% endif %}
+					{% if data.invoiced == 1 && data.payment == __("Paid") && data.status != "Cancelled"  && data.status != "No Show" %}
+						<button class="ess_btn view-invoice" title="{{ __(`Paid`) }}" data-name="{{ data.name }}" style="color:green"><i class="fa fa-usd" style="font-size: 12px"></i></button>
+					{% endif %}
+
+			</div>
+			<div class="col_row rounded_inner_lower" style="text-align:center;">
+				{% if data.status == "In Progress" || data.status == "Closed" %}
+					{% if data.has_drug_prescription && data.has_drug_prescription == 1 %}
+						<i class="fas fa-capsules" style="font-size: 15px; color:#FF3939; align-content:right;"></i>&nbsp;&nbsp;
+					{% else %}
+						<i class="fas fa-capsules" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+					<!-- plan of care -->
+					{% if data.show_plan_of_care %}
+						{% if data.plan_of_care %}
+						<i class="fas fa-list-ul" title="{{ plan_of_care }}" style="font-size: 15px; color:green; align-content:right;"></i>&nbsp;&nbsp;
+						{% else %}
+						<i class="fas fa-list-ul" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+						{% endif %}
+					{% endif %}
+					{% if data.has_item_prescription && data.has_item_prescription == 1 %}
+						<i class="fas fa-syringe" style="font-size: 15px; color:#90EE90; align-content:right;"></i>&nbsp;&nbsp;
+					{% else %}
+						<i class="fas fa-syringe" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+					{% if data.has_lab_prescription && data.has_lab_prescription == 1 %}
+						<i class="octicon octicon-beaker" style="font-size: 15px; color:#ADD8E6; align-content:right;"></i>&nbsp;&nbsp;
+					{% else %}
+						<i class="octicon octicon-beaker" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+					{% if data.has_procedure_prescription && data.has_procedure_prescription == 1 %}
+						<i class="fa fa-hand-paper-o" style="font-size: 15px; color:#90EE90; align-content:right;"></i>&nbsp;&nbsp;
+					{% else %}
+						<i class="fa fa-hand-paper-o" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+					{% if data.has_radiology_prescription && data.has_radiology_prescription == 1 %}
+						<i class="fas fa-x-ray" style="font-size: 15px; color:#666666; align-content:right;"></i>&nbsp;&nbsp;
+					{% else %}
+						<i class="fas fa-x-ray" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+				{% else %}
+					<i class="fas fa-capsules" style="font-size: 15px; color:#F2F2F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% if data.show_plan_of_care %}
+						<i class="fas fa-list-ul" style="font-size: 15px; color:#F2F1F2; align-content:right;"></i>&nbsp;&nbsp;
+					{% endif %}
+					<i class="fas fa-syringe" style="font-size: 15px; color:#F2F2F2; align-content:right;"></i>&nbsp;&nbsp;
+					<i class="octicon octicon-beaker" style="font-size: 15px; color:#F2F2F2; align-content:right;"></i>&nbsp;&nbsp;
+					<i class="fa fa-hand-paper-o" style="font-size: 15px; color:#F2F2F2; align-content:right;"></i>&nbsp;&nbsp;
+					<i class="fas fa-x-ray" style="font-size: 15px; color:#F2F2F2; align-content:right;"></i>&nbsp;&nbsp;
+				{% endif %}
+			</div>
+		</div>
+	</div>
+	</div>
+</div>

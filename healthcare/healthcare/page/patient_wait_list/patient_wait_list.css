@@ -1,0 +1,81 @@
+.a {
+	text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.app_table {
+  border: 2px solid #f2f1f0;
+  border-radius: 50px;
+  vertical-align: middle;
+}
+
+.rounded_app_details {
+  border-radius: 10px;
+  padding: 10px;
+  border: 2px solid #f2f1f0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.rounded_inner_upper {
+  border-radius: 10px 10px 0 0;
+  padding: 5px;
+  border: 1px solid #f2f1f0;
+}
+
+.ess_btn, .p_btn, .c_btn {
+  display: inline-block;
+  padding: 5px 8px;
+  font-size: 12px;
+  text-align: center;
+  background-color: #f2f1f0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.ess_btn:hover, .p_btn:hover, .c_btn:hover {
+  background-color: #D3D3D3;
+}
+
+.c_btn.confirmed i {
+  color: green;
+}
+
+.c_btn.not_confirmed i {
+  color: orange;
+}
+
+.div_lr_padding {
+  padding: 10px;
+}
+
+.col_wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.col_row {
+  padding: 5px;
+  text-align: center;
+}
+
+.tooltip {
+  font-size: 15px;
+  color: lightskyblue;
+}
+
+.end_cls {
+  margin-bottom: 8rem;
+}
+
+.item-list_margin {
+  margin-top: -1rem;
+  margin-bottom: 5rem;
+}

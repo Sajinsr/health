@@ -1333,3 +1333,19 @@ def add_node():
 		args.parent_healthcare_service_unit = None
 
 	frappe.get_doc(args).insert()
+
+
+def get_sales_invoice_for_healthcare_doc(doctype, docname):
+	sales_invoice = frappe.db.get_value(
+		"Sales Invoice Item", {"reference_dt": doctype, "reference_dn": docname}, "parent"
+	)
+
+	return frappe.get_doc("Sales Invoice", sales_invoice)
+
+
+def get_doc_for_appointment(doctype, appointment):
+	docname = frappe.db.exists(doctype, {"appointment": appointment})
+	if docname:
+		return frappe.get_doc(doctype, docname)
+	else:
+		return False

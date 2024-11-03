@@ -1,0 +1,31 @@
+{
+ "content": null,
+ "creation": "2018-12-27 12:32:43.027696",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "fa  fa-calendar-plus-o",
+ "idx": 0,
+ "modified": "2018-12-27 12:44:37.282981",
+ "modified_by": "Administrator",
+ "module": "Sehacloud Healthcare",
+ "name": "patient-appointment-desk",
+ "owner": "Administrator",
+ "page_name": "patient-appointment-desk",
+ "restrict_to_domain": "Healthcare",
+ "roles": [
+  {
+   "role": "Physician"
+  },
+  {
+   "role": "Nursing User"
+  },
+  {
+    "role": "Healthcare Administrator"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Patient Appointment Desk"
+}
