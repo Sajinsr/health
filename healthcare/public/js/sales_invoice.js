@@ -1,4 +1,94 @@
 // Healthcare
+frappe.ui.form.on("Sales Invoice", {
+	refresh(frm) {
+		if (frm.doc.docstatus === 0 && !frm.doc.is_return) {
+			frm.add_custom_button(__("Healthcare Services"), function() {
+				frappe.db.get_value("Patient", frm.doc.patient, "customer")
+				.then(r => {
+					let link_customer = null;
+					let msg = "Patient is not linked to a customer. Do you want to link the selected customer to the patient permanently?";
+					if (r.message.customer) {
+						get_healthcare_services_to_invoice(frm, link_customer);
+					} else {
+						frappe.confirm(msg,
+							() => {
+								link_customer = true;
+								get_healthcare_services_to_invoice(frm, link_customer);
+							}, () => {
+								get_healthcare_services_to_invoice(frm, link_customer);
+						})
+					}
+				})
+			},__("Get Items From"));
+			frm.add_custom_button(__("Prescriptions"), function() {
+				frappe.db.get_value("Patient", frm.doc.patient, "customer")
+				.then(r => {
+					let link_customer = null;
+					if (r.message.customer) {
+						get_drugs_to_invoice(frm, link_customer);
+					} else {
+						frappe.confirm(msg,
+							() => {
+								link_customer = true;
+								get_drugs_to_invoice(frm, link_customer);
+							}, () => {
+								get_drugs_to_invoice(frm, link_customer);
+						})
+					}
+				})
+			},__("Get Items From"));
+		}
+	},
+
+	onload_post_render(frm) {
+		if (frm.doc.items && frm.doc.items.length === 1 && !frm.doc.items[0].item_code) {
+			frm.clear_table('items');
+			frm.refresh_field('items');  // Ensure UI updates
+		}
+	},
+
+	patient(frm) {
+		if (frm.doc.patient) {
+			frappe.db.get_value("Patient", frm.doc.patient, "customer")
+				.then(r => {
+					if (!r.exc && r.message.customer) {
+						frm.set_value("customer", r.message.customer);
+					} else {
+						frappe.show_alert({
+							indicator: "warning",
+							message: __("Patient <b>{0}</b> is not linked to a Customer",
+								[`<a class="bold" href="/app/patient/${frm.doc.patient}">${frm.doc.patient}</a>`]
+							),
+						});
+						frm.set_value("customer", "");
+					}
+					frm.set_df_property("customer", "read_only", frm.doc.customer ? 1 : 0);
+				})
+		} else {
+			frm.set_value("customer", "");
+			frm.set_df_property("customer", "read_only", 0);
+		}
+	},
+
+	service_unit: function (frm) {
+		set_service_unit(frm);
+	},
+
+	items_add: function (frm) {
+		set_service_unit(frm);
+	}
+});
+
+var set_service_unit = function (frm) {
+	if (frm.doc.service_unit && frm.doc.items.length > 0) {
+		frm.doc.items.forEach((item) => {
+			if (!item.service_unit) {
+				frappe.model.set_value(item.doctype, item.name, "service_unit", frm.doc.service_unit);
+			}
+		});
+	}
+};
+
 var get_healthcare_services_to_invoice = function(frm) {
 	var me = this;
 	let selected_patient = '';
