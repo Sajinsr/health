@@ -161,7 +161,6 @@ frappe.ui.form.on("Patient Appointment", {
 	},
 
 	appointment_for: function(frm) {
-		console.log(frm.doc.appointment_for)
 		if (frm.doc.appointment_for == "Practitioner") {
 			if (!frm.doc.practitioner) {
 				frm.set_value("department", "");

@@ -415,6 +415,7 @@ def get_clinical_procedures_to_invoice(patient, company):
 					"description": procedure.consumption_details,
 				}
 			)
+	return clinical_procedures_to_invoice
 
 
 def get_observations_to_invoice(patient, company):
