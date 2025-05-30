@@ -103,11 +103,15 @@ class Patient(Document):
 			self.language = frappe.db.get_single_value("System Settings", "language")
 
 	def create_website_user(self):
+		filters = {"email": self.email}
+		if self.mobile:
+			filters["mobile_no"] = self.mobile
 		users = frappe.db.get_all(
 			"User",
 			fields=["email", "mobile_no"],
-			or_filters={"email": self.email, "mobile_no": self.mobile},
+			or_filters=filters,
 		)
+
 		if users and users[0]:
 			frappe.throw(
 				_(
