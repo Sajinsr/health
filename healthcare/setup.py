@@ -1243,7 +1243,7 @@ def setup_code_sysem_for_version():
 
 
 def setup_non_fhir_code_systems():
-	"""A subset of external code systems as published in the FHIR R5 documentation
+	"""A subset of external code systems as published in the FHIR R4 documentation
 	https://www.hl7.org/fhir/terminologies-systems.html#external
 
 	For a full set of external code systems, see

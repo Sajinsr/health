@@ -1,0 +1,108 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-05-31 22:01:25.640961",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "path",
+  "short",
+  "datatype",
+  "definition",
+  "type",
+  "column_break_zvmg",
+  "min",
+  "max",
+  "is_required",
+  "map"
+ ],
+ "fields": [
+  {
+   "columns": 5,
+   "fieldname": "path",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Path",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_zvmg",
+   "fieldtype": "Column Break",
+   "search_index": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "min",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Minimum Cardinality",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "max",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Maximum Cardinality",
+   "read_only": 1
+  },
+  {
+   "fieldname": "datatype",
+   "fieldtype": "Data",
+   "label": "Datatype",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "If Minimum Cardinality > 0",
+   "fieldname": "is_required",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Required",
+   "read_only": 1
+  },
+  {
+   "fieldname": "definition",
+   "fieldtype": "Long Text",
+   "label": "Definition",
+   "read_only": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Type Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "short",
+   "fieldtype": "Data",
+   "label": "Short",
+   "read_only": 1
+  },
+  {
+   "fieldname": "map",
+   "fieldtype": "Code",
+   "label": "Map",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-02 10:31:32.529132",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Structure Definition Element",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,144 @@
+{
+ "actions": [],
+ "autoname": "UUID",
+ "creation": "2025-06-01 10:31:17.421702",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "overview_tab",
+  "overview_section",
+  "fhir_resource_map",
+  "fhir_profile",
+  "fhir_version",
+  "column_break_njwp",
+  "fhir_resource_type",
+  "frappe_doctype",
+  "frappe_document",
+  "resource_tab",
+  "section_break_xlmy",
+  "fhir_resource"
+ ],
+ "fields": [
+  {
+   "fetch_from": "fhir_resource_map.fhir_resource",
+   "fieldname": "fhir_resource_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Resource Type",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "fhir_resource_map.frappe_doctype",
+   "fieldname": "frappe_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Frappe DocType",
+   "options": "DocType",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_xlmy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "fhir_resource",
+   "fieldtype": "Code",
+   "label": "FHIR Resource",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "fhir_resource_map",
+   "fieldtype": "Link",
+   "label": "FHIR Resource Map",
+   "options": "FHIR Resource Map",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "fhir_resource_map.fhir_profile",
+   "fieldname": "fhir_profile",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Profile",
+   "options": "FHIR Profile",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "fhir_resource_map.fhir_version",
+   "fieldname": "fhir_version",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Version",
+   "options": "FHIR Version",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "frappe_document",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Frappe Document",
+   "options": "frappe_doctype",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "overview_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resource_tab",
+   "fieldtype": "Tab Break",
+   "label": "Resource"
+  },
+  {
+   "fieldname": "overview_tab",
+   "fieldtype": "Tab Break",
+   "label": "Overview"
+  },
+  {
+   "fieldname": "column_break_njwp",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-02 15:55:10.337079",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Resource",
+ "naming_rule": "UUID",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
