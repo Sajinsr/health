@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "format:{fhir_sd}-{sd_version}",
  "creation": "2025-05-31 19:59:06.582086",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -150,11 +149,10 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-02 15:56:26.874357",
+ "modified": "2025-06-04 12:09:33.945169",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Structure Definition",
- "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
@@ -171,6 +169,7 @@
   }
  ],
  "row_format": "Dynamic",
+ "search_fields": "fhir_version, fhir_profile, publisher",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

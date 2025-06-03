@@ -3,6 +3,5 @@
 
 frappe.ui.form.on('FHIR Resource Map', {
 	// refresh(frm) {
-
 	// }
 });

@@ -11,7 +11,7 @@
   "column_break_sbfw",
   "description",
   "section_break_losh",
-  "fhir_resource",
+  "fhir_structure_def",
   "column_break_nvkk",
   "frappe_doctype",
   "section_break_nqfe",
@@ -51,14 +51,6 @@
    "options": "FHIR Profile"
   },
   {
-   "fieldname": "fhir_resource",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "FHIR Resource",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_nvkk",
    "fieldtype": "Column Break"
   },
@@ -93,12 +85,21 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "fieldname": "fhir_structure_def",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Resource",
+   "options": "FHIR Structure Definition",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-02 15:54:30.271372",
+ "modified": "2025-06-02 16:00:35.320411",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",
