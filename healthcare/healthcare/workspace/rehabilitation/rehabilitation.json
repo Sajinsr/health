@@ -1,0 +1,189 @@
+{
+ "app": "healthcare",
+ "charts": [
+  {
+   "chart_name": "Therapy Sessions",
+   "label": "Therapy Sessions"
+  }
+ ],
+ "content": "[{\"id\":\"jzerjL-IqP\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Therapy Sessions\",\"col\":12}},{\"id\":\"3KFdO2Fwp0\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Therapy Plans\",\"col\":4}},{\"id\":\"AV5F0PlKNK\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Completed Therapy Plans\",\"col\":4}},{\"id\":\"owXdMv-dlZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Sessions to Bill\",\"col\":4}},{\"id\":\"ZtNMHNX_E8\",\"type\":\"header\",\"data\":{\"text\":\"Rehabilitation and Physiotherapy\",\"col\":12}},{\"id\":\"uuMANt7wmQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient\",\"col\":4}},{\"id\":\"WiIivy8t-k\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Encounter\",\"col\":4}},{\"id\":\"EZ6eAZVBPM\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Therapy Plan\",\"col\":4}},{\"id\":\"4g-2RZu19w\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Therapy Session\",\"col\":4}},{\"id\":\"r3dQRbqHjv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Assessment\",\"col\":4}},{\"id\":\"hPP6cgJwSF\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"TdpNEQ7zCY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"QJcnnt2c6L\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient History\",\"col\":4}},{\"id\":\"Fg69BGbqkh\",\"type\":\"paragraph\",\"data\":{\"text\":\"Masters\",\"col\":12}},{\"id\":\"kl5pZe9Jgl\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}}]",
+ "creation": "2025-05-30 17:37:04.694230",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "non-profit",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Rehabilitation",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 7,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient",
+   "link_count": 0,
+   "link_to": "Patient",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Healthcare Practitioner",
+   "link_count": 0,
+   "link_to": "Healthcare Practitioner",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Medical Department",
+   "link_count": 0,
+   "link_to": "Medical Department",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Exercise Type",
+   "link_count": 0,
+   "link_to": "Exercise Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Therapy Type",
+   "link_count": 0,
+   "link_to": "Therapy Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Therapy Plan Template",
+   "link_count": 0,
+   "link_to": "Therapy Plan Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Healthcare Service Unit",
+   "link_count": 0,
+   "link_to": "Healthcare Service Unit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-06-03 12:03:31.662093",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Rehabilitation",
+ "number_cards": [
+  {
+   "label": "Total Therapy Plans",
+   "number_card_name": "Total Therapy Plans"
+  },
+  {
+   "label": "Completed Therapy Plans",
+   "number_card_name": "Total Completed Therapy Plans"
+  },
+  {
+   "label": "Total Sessions to Bill",
+   "number_card_name": "Total Sessions to Bill"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Healthcare",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 25.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Patient",
+   "link_to": "Patient",
+   "stats_filter": "[[\"Patient\",\"status\",\"=\",\"Active\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Encounter",
+   "link_to": "Patient Encounter",
+   "stats_filter": "[[\"Therapy Plan Detail\",\"therapy_type\",\"is\",\"not set\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Therapy Plan",
+   "link_to": "Therapy Plan",
+   "stats_filter": "[[\"Therapy Plan\",\"status\",\"in\",[\"Not Started\",\"In Progress\",null],false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Sessions",
+   "label": "Therapy Session",
+   "link_to": "Therapy Session",
+   "stats_filter": "[[\"Therapy Session\",\"docstatus\",\"!=\",\"2\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Assessment",
+   "link_to": "Patient Assessment",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient History",
+   "link_to": "patient_history",
+   "type": "Page"
+  }
+ ],
+ "title": "Rehabilitation",
+ "type": "Workspace"
+}

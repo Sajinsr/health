@@ -1,0 +1,193 @@
+{
+ "app": "healthcare",
+ "charts": [
+  {
+   "chart_name": "Insurance Coverage",
+   "label": "Insurance Coverage"
+  }
+ ],
+ "content": "[{\"id\":\"2YpclWqsbl\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Insurance Coverage\",\"col\":12}},{\"id\":\"ElZ1YJANNq\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Payors\",\"col\":4}},{\"id\":\"4qo_Vh-XPA\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Contracts\",\"col\":4}},{\"id\":\"ARw1Wzc7sD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"IP Records Covered\",\"col\":4}},{\"id\":\"JExoVJ9hah\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Expiring Contracts\",\"col\":4}},{\"id\":\"7R5geM0eiC\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Unpaid Claims\",\"col\":4}},{\"id\":\"-b4MdATviZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Claim Value\",\"col\":4}},{\"id\":\"4cQDF7WK7s\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Insurance</span>\",\"col\":12}},{\"id\":\"vb8BRfQ2xO\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient\",\"col\":4}},{\"id\":\"hgYSETwmb4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Appointment\",\"col\":4}},{\"id\":\"ZlXP-idVZh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"7kmzX1F2Pa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Insurance Policy\",\"col\":4}},{\"id\":\"5_UWBfiD8y\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Insurance Payor\",\"col\":4}},{\"id\":\"rTiJyM7gp6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Insurance Payor Contract\",\"col\":4}},{\"id\":\"U6WaTxAcSl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Insurance Coverage\",\"col\":4}},{\"id\":\"X5YMfgIhuK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Insurance Claim\",\"col\":4}},{\"id\":\"7gyXQgNjcE\",\"type\":\"paragraph\",\"data\":{\"text\":\"atientMasters\",\"col\":12}},{\"id\":\"4LdIDU-094\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}}]",
+ "creation": "2025-05-30 17:40:59.886349",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "organization",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Insurance",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient",
+   "link_count": 0,
+   "link_to": "Patient",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Insurance Payor",
+   "link_count": 0,
+   "link_to": "Insurance Payor",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Insurance Payor Eligibility Plan",
+   "link_count": 0,
+   "link_to": "Insurance Payor Eligibility Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient Insurance Policy",
+   "link_count": 0,
+   "link_to": "Patient Insurance Policy",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item insurance Eligibility",
+   "link_count": 0,
+   "link_to": "Item Insurance Eligibility",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-06-03 11:16:41.892527",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Insurance",
+ "number_cards": [
+  {
+   "label": "Total Payors",
+   "number_card_name": "Total Payors"
+  },
+  {
+   "label": "Total Claim Value",
+   "number_card_name": "Total Claims"
+  },
+  {
+   "label": "Total Contracts",
+   "number_card_name": "Total Contracts"
+  },
+  {
+   "label": "IP Records Covered",
+   "number_card_name": "IP Records Covered"
+  },
+  {
+   "label": "Expiring Contracts",
+   "number_card_name": "Expiring Contracts"
+  },
+  {
+   "label": "Unpaid Claims",
+   "number_card_name": "Unpaid Claims"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Healthcare",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 27.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Patient",
+   "link_to": "Patient",
+   "stats_filter": "[[\"Patient\",\"status\",\"=\",\"Active\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Patient Appointment",
+   "link_to": "Patient Appointment",
+   "stats_filter": "[[\"Patient Appointment\",\"status\",\"=\",\"Open\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[[\"Sales Invoice\",\"docstatus\",\"=\",\"1\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Insurance Payor",
+   "link_to": "Insurance Payor",
+   "stats_filter": "[[\"Insurance Payor\",\"disabled\",\"=\",0,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Insurance Payor Contract",
+   "link_to": "Insurance Payor Contract",
+   "stats_filter": "[[\"Insurance Payor Contract\",\"is_active\",\"=\",1,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Insurance Policy",
+   "link_to": "Patient Insurance Policy",
+   "stats_filter": "[[\"Patient Insurance Policy\",\"docstatus\",\"=\",\"1\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Approved",
+   "label": "Patient Insurance Coverage",
+   "link_to": "Patient Insurance Coverage",
+   "stats_filter": "[[\"Patient Insurance Coverage\",\"status\",\"=\",\"Approved\",false],[\"Patient Insurance Coverage\",\"docstatus\",\"=\",\"1\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Completed",
+   "label": "Insurance Claim",
+   "link_to": "Insurance Claim",
+   "stats_filter": "[[\"Insurance Claim\",\"status\",\"=\",\"Completed\",false],[\"Insurance Claim\",\"docstatus\",\"=\",\"1\",false]]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Insurance",
+ "type": "Workspace"
+}

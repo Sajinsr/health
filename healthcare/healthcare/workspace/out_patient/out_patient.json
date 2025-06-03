@@ -1,0 +1,237 @@
+{
+ "app": "healthcare",
+ "charts": [
+  {
+   "chart_name": "Patient Appointments OP",
+   "label": "Patient Appointments"
+  }
+ ],
+ "content": "[{\"id\":\"pxdw7O75CN\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Patient Appointments\",\"col\":12}},{\"id\":\"gFM5r4K3y2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Patients\",\"col\":4}},{\"id\":\"RMlQTL0meV\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Open Appointments\",\"col\":4}},{\"id\":\"G41EJQwZox\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Appointments To Bill\",\"col\":4}},{\"id\":\"bEnAyCZSMA\",\"type\":\"paragraph\",\"data\":{\"text\":\"Out Patient\",\"col\":12}},{\"id\":\"4-OtW2OYnu\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Appointment\",\"col\":4}},{\"id\":\"gzToa2CVJ7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vital Signs\",\"col\":4}},{\"id\":\"mz6BTyIeXY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient Encounter\",\"col\":4}},{\"id\":\"AkEX3dKmZD\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient\",\"col\":4}},{\"id\":\"Z5asYc8KpB\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Healthcare Practitioner\",\"col\":4}},{\"id\":\"8FLib33wDK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"r9SIq1_wGW\",\"type\":\"paragraph\",\"data\":{\"text\":\"Orders\",\"col\":12}},{\"id\":\"-eeJJ9ocR6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Request\",\"col\":4}},{\"id\":\"OKKaPrOhVs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Medication Request\",\"col\":4}},{\"id\":\"lqRsgLfH2Y\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"6qdaeMOZpI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient History\",\"col\":4}},{\"id\":\"07dVX2HyUB\",\"type\":\"paragraph\",\"data\":{\"text\":\"Reports &amp; Masters\",\"col\":12}},{\"id\":\"QbxiOFmIBz\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"3RBhVSSL8r\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports and Pages\",\"col\":4}}]",
+ "creation": "2025-05-30 17:35:08.867048",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "users",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Out-Patient",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports and Pages",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient Appointment Analytics",
+   "link_count": 0,
+   "link_to": "Patient Appointment Analytics",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Patient Appointment",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient History",
+   "link_count": 0,
+   "link_to": "patient_history",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient Progress",
+   "link_count": 0,
+   "link_to": "patient-progress",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient",
+   "link_count": 0,
+   "link_to": "Patient",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Healthcare Practitioner",
+   "link_count": 0,
+   "link_to": "Healthcare Practitioner",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Practitioner Schedule",
+   "link_count": 0,
+   "link_to": "Practitioner Schedule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Medical Department",
+   "link_count": 0,
+   "link_to": "Medical Department",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Medication",
+   "link_count": 0,
+   "link_to": "Medication",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Healthcare Service Unit",
+   "link_count": 0,
+   "link_to": "Healthcare Service Unit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-06-03 11:59:36.290379",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Out-Patient",
+ "number_cards": [
+  {
+   "label": "Total Patients",
+   "number_card_name": "Total Out Patients"
+  },
+  {
+   "label": "Appointments To Bill",
+   "number_card_name": "Appointments To Bill OP"
+  },
+  {
+   "label": "Open Appointments",
+   "number_card_name": "Open Appointments OP"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Healthcare",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 23.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Patient",
+   "link_to": "Patient",
+   "stats_filter": "[[\"Patient\",\"status\",\"=\",\"Active\",false],[\"Patient\",\"inpatient_record\",\"is\",\"not set\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Service Request",
+   "link_to": "Service Request",
+   "stats_filter": "[[\"Service Request\",\"docstatus\",\"=\",\"1\",false],[\"Service Request\",\"inpatient_record\",\"is\",\"not set\",false],[\"Service Request\",\"status\",\"=\",\"active-Request Status\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Healthcare Practitioner",
+   "link_to": "Healthcare Practitioner",
+   "stats_filter": "[[\"Healthcare Practitioner\",\"status\",\"=\",\"Active\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Patient Appointment",
+   "link_to": "Patient Appointment",
+   "stats_filter": "[[\"Patient Appointment\",\"status\",\"=\",\"Open\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Medication Request",
+   "link_to": "Medication Request",
+   "stats_filter": "[[\"Medication Request\",\"docstatus\",\"=\",\"1\",false],[\"Medication Request\",\"inpatient_record\",\"is\",\"not set\",false],[\"Medication Request\",\"status\",\"=\",\"active-Medication Request Status\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Vital Signs",
+   "link_to": "Vital Signs",
+   "stats_filter": "[[\"Vital Signs\",\"inpatient_record\",\"is\",\"not set\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient Encounter",
+   "link_to": "Patient Encounter",
+   "stats_filter": "[[\"Patient Encounter\",\"inpatient_record\",\"is\",\"not set\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient History",
+   "link_to": "patient_history",
+   "type": "Page"
+  }
+ ],
+ "title": "Out-Patient",
+ "type": "Workspace"
+}

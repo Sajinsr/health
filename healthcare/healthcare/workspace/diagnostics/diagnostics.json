@@ -1,0 +1,161 @@
+{
+ "app": "healthcare",
+ "charts": [
+  {
+   "chart_name": "Observations",
+   "label": "Observations"
+  }
+ ],
+ "content": "[{\"id\":\"HSlLOJpmAY\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Observations\",\"col\":12}},{\"id\":\"svg8yn8WQc\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Diagnostic Reports\",\"col\":4}},{\"id\":\"3qxtkG85zc\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Observations\",\"col\":4}},{\"id\":\"IP9QdvUaX3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Service Requests\",\"col\":4}},{\"id\":\"RUdamDpLck\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Diagnostics</span>\",\"col\":12}},{\"id\":\"I32AG6KIC5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient\",\"col\":4}},{\"id\":\"5H5-n7VDAu\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\",\"col\":4}},{\"id\":\"WcF361lYlX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Request\",\"col\":4}},{\"id\":\"NSI3pNuG0c\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sample Collection\",\"col\":4}},{\"id\":\"Y4JXpBH8b0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Diagnostic Report\",\"col\":4}},{\"id\":\"LfY6HIGIwx\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Observation\",\"col\":4}},{\"id\":\"I7h_6GPPMx\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"tlxVe5EZak\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Patient History\",\"col\":3}},{\"id\":\"Rckba4Y7AP\",\"type\":\"paragraph\",\"data\":{\"text\":\"Masters\",\"col\":12}},{\"id\":\"tt2GYYSfpi\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}}]",
+ "creation": "2025-05-30 17:38:48.052912",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "file-large",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Diagnostics",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patient",
+   "link_count": 0,
+   "link_to": "Patient",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Observation Template",
+   "link_count": 0,
+   "link_to": "Observation Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Specimen",
+   "link_count": 0,
+   "link_to": "Specimen",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Healthcare Service Unit",
+   "link_count": 0,
+   "link_to": "Healthcare Service Unit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-06-03 12:01:40.228225",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Diagnostics",
+ "number_cards": [
+  {
+   "label": "Total Diagnostic Reports",
+   "number_card_name": "Total Diagnostic Reports"
+  },
+  {
+   "label": "Total Observations",
+   "number_card_name": "Total Observations"
+  },
+  {
+   "label": "Total Service Requests",
+   "number_card_name": "Total Service Requests"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Healthcare",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 26.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "Patient",
+   "link_to": "Patient",
+   "stats_filter": "[[\"Patient\",\"status\",\"=\",\"Active\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": "{} Observations",
+   "label": "Observation",
+   "link_to": "Observation",
+   "stats_filter": "[[\"Observation\",\"docstatus\",\"=\",\"1\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "link_to": "Sales Invoice",
+   "stats_filter": "[[\"Sales Invoice\",\"docstatus\",\"!=\",\"2\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Requests",
+   "label": "Service Request",
+   "link_to": "Service Request",
+   "stats_filter": "[[\"Service Request\",\"docstatus\",\"=\",\"1\",false],[\"Service Request\",\"template_dt\",\"=\",\"Observation Template\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Collected",
+   "label": "Sample Collection",
+   "link_to": "Sample Collection",
+   "stats_filter": "[[\"Sample Collection\",\"status\",\"=\",\"Collected\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Open",
+   "label": "Diagnostic Report",
+   "link_to": "Diagnostic Report",
+   "stats_filter": "[[\"Diagnostic Report\",\"status\",\"=\",\"Open\",false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Patient History",
+   "link_to": "patient_history",
+   "type": "Page"
+  }
+ ],
+ "title": "Diagnostics",
+ "type": "Workspace"
+}
