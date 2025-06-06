@@ -121,6 +121,7 @@ doc_events = {
 		"on_submit": "healthcare.healthcare.doctype.patient_history_settings.patient_history_settings.create_medical_record",
 		"on_cancel": "healthcare.healthcare.doctype.patient_history_settings.patient_history_settings.delete_medical_record",
 		"on_update_after_submit": "healthcare.healthcare.doctype.patient_history_settings.patient_history_settings.update_medical_record",
+		"on_update": "healthcare.interoperability.utils.fhir_engine.upsert_fhir_resource",
 	},
 	"Sales Invoice": {
 		"on_submit": "healthcare.healthcare.utils.manage_invoice_submit_cancel",
@@ -131,7 +132,9 @@ doc_events = {
 		"after_insert": "healthcare.healthcare.utils.create_healthcare_service_unit_tree_root",
 		"on_trash": "healthcare.healthcare.utils.company_on_trash",
 	},
-	"Patient": {"after_insert": "healthcare.regional.india.abdm.utils.set_consent_attachment_details"},
+	"Patient": {
+		"after_insert": "healthcare.regional.india.abdm.utils.set_consent_attachment_details",
+	},
 	"Payment Entry": {
 		"on_submit": "healthcare.healthcare.custom_doctype.payment_entry.manage_payment_entry_submit_cancel",
 		"on_cancel": "healthcare.healthcare.custom_doctype.payment_entry.manage_payment_entry_submit_cancel",
