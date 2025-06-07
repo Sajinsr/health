@@ -58,14 +58,32 @@ frappe.ui.form.on("FHIR Resource Map", {
 				],
 				primary_action_label: "Preview",
 				primary_action(values) {
+					let docname =  values.docname;
 					frappe.call({
+
 						method: "preview_fhir_resource",
 						doc: frm.doc,
-						args: { docname: values.docname },
+						args: { docname: docname },
 						callback(res) {
+
+							const json = JSON.stringify(res.message, null, 2);
+							const blob = new Blob([json], { type: 'application/json' });
+							const url = URL.createObjectURL(blob);
+							const downloadId = frappe.utils.get_random(8);
+
+							const html = `
+								<pre style="max-height: 600px; overflow: auto;">${frappe.utils.escape_html(json)}</pre>
+								<div style="margin-top: 1rem;">
+									<a id="download-${downloadId}" href="${url}" download="${frappe_doctype}-${docname}-Marley-FHIR.json" class="btn btn-sm btn-primary">
+										${__("Download FHIR JSON")}
+									</a>
+								</div>
+							`;
+							dialog.hide();
+
 							frappe.msgprint({
 								title: __("FHIR Resource Preview"),
-								message: `<pre style="max-height: 600px; overflow: auto;">${JSON.stringify(res.message, null, 2)}</pre>`,
+								message: html,
 								indicator: "blue",
 								wide: 1,
 							});
