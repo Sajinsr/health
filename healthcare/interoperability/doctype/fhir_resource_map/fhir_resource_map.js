@@ -32,10 +32,51 @@ frappe.ui.form.on("FHIR Resource Map", {
 	},
 
 	refresh: (frm) => {
+
 		frm.fields_dict["map"].grid.wrapper.find(".grid-add-row").hide();
 		frm.fields_dict["map"].grid.add_custom_button(__("Map Fields"), () => {
 			show_map_dialog(frm);
 		});
+
+		frm.add_custom_button(__("Preview Resource"), () => {
+			const frappe_doctype = frm.doc.frappe_doctype;
+
+			if (!frappe_doctype) {
+				frappe.throw(__("Please map a doctype and fields to generate preview"))
+			}
+
+			const dialog = new frappe.ui.Dialog({
+				title: __("FHIR Resource Preview"),
+				fields: [
+					{
+						label: __(`Select a ${frappe_doctype} Document`),
+						fieldname: "docname",
+						fieldtype: "Link",
+						options: frappe_doctype,
+						reqd: true
+					}
+				],
+				primary_action_label: "Preview",
+				primary_action(values) {
+					frappe.call({
+						method: "preview_fhir_resource",
+						doc: frm.doc,
+						args: { docname: values.docname },
+						callback(res) {
+							frappe.msgprint({
+								title: __("FHIR Resource Preview"),
+								message: `<pre style="max-height: 600px; overflow: auto;">${JSON.stringify(res.message, null, 2)}</pre>`,
+								indicator: "blue",
+								wide: 1,
+							});
+						}
+					});
+				}
+			});
+
+			dialog.show();
+		}); // button Preview Resource
+
 	}
 });
 

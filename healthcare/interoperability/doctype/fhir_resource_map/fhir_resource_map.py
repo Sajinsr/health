@@ -2,7 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from healthcare.interoperability.utils.fhir_engine import generate_fhir_resource
 
 
 class FHIRResourceMap(Document):
@@ -24,7 +27,9 @@ class FHIRResourceMap(Document):
 		]
 		if missing:
 			frappe.throw(
-				"You must map or supply a default value for these FHIR elements which are required as per Resource Structure Definition:\n  "
+				_(
+					"You must map or supply a default value for these FHIR elements which are required as per Resource Structure Definition:\n  "
+				)
 				+ "\n  ".join(missing)
 			)
 
@@ -35,3 +40,14 @@ class FHIRResourceMap(Document):
 			self.append("map", frappe._dict(el))
 
 		self.save()
+
+	@frappe.whitelist()
+	def preview_fhir_resource(self, docname):
+
+		if not self.frappe_doctype:
+			frappe.throw(_("Frappe Doctype is not specified in this FHIR Resource Map."))
+
+		doc = frappe.get_doc(self.frappe_doctype, docname)
+
+		resource = generate_fhir_resource(doc)
+		return resource
