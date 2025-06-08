@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-07 20:41:20.922167",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "element_name",
+  "fhir_datatype",
+  "column_break_qkae",
+  "min",
+  "max",
+  "is_required"
+ ],
+ "fields": [
+  {
+   "fieldname": "element_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Element Name",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "fhir_datatype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "FHIR Datatype",
+   "options": "FHIR Datatype",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_qkae",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "min",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Min"
+  },
+  {
+   "fieldname": "max",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Max"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_required",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Required ",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-07 22:38:34.575418",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Datatype Element",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

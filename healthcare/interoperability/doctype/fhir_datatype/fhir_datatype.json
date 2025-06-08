@@ -1,0 +1,120 @@
+{
+ "actions": [],
+ "autoname": "field:fhir_datatype",
+ "creation": "2025-06-07 20:36:09.676611",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "fhir_datatype",
+  "is_primitive",
+  "frappe_fieldtype",
+  "regex",
+  "system_defined",
+  "column_break_mxwk",
+  "description",
+  "section_break_yhef",
+  "elements"
+ ],
+ "fields": [
+  {
+   "fieldname": "fhir_datatype",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "FHIR Datatype",
+   "read_only_depends_on": "eval:doc.system_defined",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_mxwk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description",
+   "read_only_depends_on": "eval:doc.system_defined"
+  },
+  {
+   "fieldname": "section_break_yhef",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_primitive",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Is Primitive",
+   "read_only_depends_on": "eval:doc.system_defined",
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.is_primitive",
+   "fieldname": "frappe_fieldtype",
+   "fieldtype": "Data",
+   "label": "Frappe Fieldtype",
+   "read_only_depends_on": "eval:doc.system_defined"
+  },
+  {
+   "fieldname": "elements",
+   "fieldtype": "Table",
+   "label": "Elements",
+   "options": "FHIR Datatype Element"
+  },
+  {
+   "depends_on": "eval:doc.is_primitive",
+   "fieldname": "regex",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Regex",
+   "read_only_depends_on": "eval:doc.system_defined"
+  },
+  {
+   "default": "0",
+   "fieldname": "system_defined",
+   "fieldtype": "Check",
+   "label": "System Defined"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-08 00:16:02.447273",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Datatype",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Healthcare Administrator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
