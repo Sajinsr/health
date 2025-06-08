@@ -8,25 +8,27 @@
   "overview_tab",
   "overview_section",
   "fhir_resource_map",
-  "fhir_profile",
   "fhir_version",
+  "fhir_profile",
   "column_break_njwp",
   "fhir_resource_type",
   "frappe_doctype",
   "frappe_document",
-  "resource_tab",
-  "section_break_xlmy",
-  "fhir_resource"
+  "section_break_yyne",
+  "fhir_resource",
+  "column_break_bcvm",
+  "resource_html"
  ],
  "fields": [
   {
-   "fetch_from": "fhir_resource_map.fhir_resource",
+   "fetch_from": "fhir_resource_map.fhir_structure_def",
    "fieldname": "fhir_resource_type",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "FHIR Resource Type",
+   "label": "FHIR Resource Type (Structure Definition)",
+   "options": "FHIR Structure Definition",
    "read_only": 1,
    "reqd": 1,
    "search_index": 1
@@ -41,10 +43,6 @@
    "options": "DocType",
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "section_break_xlmy",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "fhir_resource",
@@ -98,11 +96,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "resource_tab",
-   "fieldtype": "Tab Break",
-   "label": "Resource"
-  },
-  {
    "fieldname": "overview_tab",
    "fieldtype": "Tab Break",
    "label": "Overview"
@@ -110,13 +103,26 @@
   {
    "fieldname": "column_break_njwp",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_yyne",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "resource_html",
+   "fieldtype": "HTML",
+   "label": "Resource HTML"
+  },
+  {
+   "fieldname": "column_break_bcvm",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-02 15:55:10.337079",
+ "modified": "2025-06-09 16:48:36.620312",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource",
