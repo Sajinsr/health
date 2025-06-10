@@ -8,6 +8,7 @@
   "section_break_vaer",
   "fhir_version",
   "fhir_profile",
+  "resource_type",
   "column_break_sbfw",
   "description",
   "section_break_losh",
@@ -94,12 +95,20 @@
    "fieldtype": "Table",
    "label": "Element \u2192 Field Map",
    "options": "FHIR Resource Element Map"
+  },
+  {
+   "fieldname": "resource_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Resource Type",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-05 11:54:48.327439",
+ "modified": "2025-06-09 21:26:15.653504",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",

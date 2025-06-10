@@ -58,7 +58,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 				],
 				primary_action_label: "Preview",
 				primary_action(values) {
-					let docname =  values.docname;
+					let docname = values.docname;
 					frappe.call({
 
 						method: "preview_fhir_resource",
@@ -100,19 +100,46 @@ frappe.ui.form.on("FHIR Resource Map", {
 
 function show_map_dialog(frm) {
 	frappe.model.with_doctype(frm.doc.frappe_doctype, () => {
-		let doc_fields = frappe.get_meta(frm.doc.frappe_doctype)
-			.fields
-			.filter(df => !["Section Break", "Column Break", "Tab Break"].includes(df.fieldtype))
-			.map(df => df.fieldname);
+		let doc_fields = [];
 
-		doc_fields.push("name");
+		doc_fields.push({
+			value: "name",
+			label: "ID",
+		});
+		const meta = frappe.get_meta(frm.doc.frappe_doctype);
+
+		// Get main doctype fields
+		meta.fields.forEach(df => {
+			if (!["Section Break", "Column Break", "Tab Break"].includes(df.fieldtype)) {
+				if (df.fieldtype === "Table" && df.options) {
+
+					const child_meta = frappe.get_meta(df.options);
+					const child_table_label = df.label || df.fieldname;
+
+					child_meta.fields.forEach(sub_df => {
+						if (!["Section Break", "Column Break", "Tab Break"].includes(sub_df.fieldtype)) {
+							doc_fields.push({
+								value: `${df.fieldname}.${sub_df.fieldname}`,
+								label: `${sub_df.label} (${child_table_label})`,
+							});
+						}
+					});
+				} else {
+					doc_fields.push({
+						value: df.fieldname,
+						label: df.label || df.fieldname,
+					});
+				}
+			}
+		});
+
 
 		frappe.db.get_doc("FHIR Structure Definition", frm.doc.fhir_structure_def)
 			.then(sd => {
 				let elements = sd.element_paths;
 				const dialog = new frappe.ui.Dialog({
 					title: __("Map FHIR {0} ({1}) → Frappe {2}", [sd.fhir_sd, sd.sd_version, frm.doc.frappe_doctype]),
-					size: "large",
+					size: "extra-large",
 					fields: [{ fieldtype: "HTML", fieldname: "map_table" }],
 					primary_action_label: __("Save Mapping"),
 					primary_action: () => {
@@ -122,7 +149,7 @@ function show_map_dialog(frm) {
 
 							const $row = $(this);
 							const element = elements.find(({ path }) => path === $row.attr("data-path"));
-
+							console.log(element);
 							element_maps.push({
 								fhir_path: $row.attr("data-path"),
 								frappe_field: $row.find("select").val() || null,
@@ -134,6 +161,7 @@ function show_map_dialog(frm) {
 								short: element.short,
 								definition: element.definition,
 								is_required: element.is_required,
+								is_choice_type: element.is_choice_type,
 							});
 						});
 
@@ -165,11 +193,11 @@ function show_map_dialog(frm) {
 				let html = ""
 					+ "<table class='table table-bordered'>"
 					+ "<thead><tr>"
-					+ "<th>" + __("FHIR Element Path") + "</th>"
-					+ "<th>" + __("Frappe Field") + "</th>"
-					+ "<th>" + __("Data Type") + "</th>"
-					+ "<th>" + __("Min Card") + "</th>"
-					+ "<th>" + __("Default Value") + "</th>"
+					+ "<th style='width:30%;'>" + __("FHIR Element Path") + "</th>"
+					+ "<th style='width:20%;'>" + __("Data Type") + "</th>"
+					+ "<th style='width:10%;'>" + __("Min Card") + "</th>"
+					+ "<th style='width:20%;'>" + __("Frappe Field") + "</th>"
+					+ "<th style='width:20%;'>" + __("Default Value") + "</th>"
 					+ "</tr></thead>"
 					+ "<tbody>";
 
@@ -177,40 +205,46 @@ function show_map_dialog(frm) {
 
 					const is_id = el.path === `${sd.fhir_sd}.id`; // path .id is mapped to name
 					const is_dt = el.path === sd.fhir_sd; // resource is mapped to doctype
+					const is_editable = el.is_choice_type; // is datatype choice element
 
 					// if already mapped, set that
 					const map = frm.doc.map.find(({ fhir_path }) => fhir_path === el.path);
-					const id_val = is_id ? "name" : ((frm.doc.map.length ? map.frappe_field : "") || "");
+					const id_val = is_id ? "ID" : ((frm.doc.map.length ? map.frappe_field : "") || "");
 					const dt_val = is_dt ? frm.doc.frappe_doctype : ((frm.doc.map.length ? map.default_value : "") || "");
 
-					// fhir element paths
-					html += "<tr data-path='" + el.path + "'>" // new row
-						+ "<td>" + el.path + "</td>"
+					// fhir element paths (not readonly cos of choice)
+					html += `<tr data-path=${el.path}>`
+					+ "<td><input class='form-control' type='text'"
+					+ " value='" + (el.path || "") + `' ${!is_editable ? " readonly" : ""}></td>`
 
-						// Frappe Field
-						// set select options
-						+ "<td><select class='form-control'" + (is_dt || is_id ? " disabled" : "") + ">"
-						+ "<option value=''>" + __("-- Select --") + "</option>";
+					//  "<tr data-path='" + el.path + "'>" // new row
+					// + "<td>" + el.path + "</td>"
+
+					// Data Type (not readonly cos of choice)
+					+ "<td><input class='form-control' type='text'"
+					+ " value='" + (el.type || "") + `' ${!is_editable ? " readonly" : ""}></td>`
+
+					// Min Card (readonly)
+					+ "<td><input class='form-control' type='text'"
+					+ " value='" + (el.min || 0) + "' readonly></td>"
+
+					// Frappe field
+					html += `<td><select class='form-control'${(is_dt || is_id ? " disabled" : "")}>`;
+					html += `<option value="">${__("-- Select to Map --")}</option>`;
+
 					doc_fields.forEach(f => {
-						const sel = (f === id_val) ? " selected" : ""; // name is selected
-						html += "<option value='" + f + "'" + sel + ">" + f + "</option>";
+						const sel = (f.label === id_val) ? " selected" : "";
+						html += `<option value="${f.value}"${sel}>${f.label}</option>`;
 					});
-					html += "</select></td>"
+					html += "</select></td>";
 
-						// Data Type (readonly) Remove?
-						+ "<td><input class='form-control' type='text'"
-						+ " value='" + (el.type || "") + "' readonly></td>"
-
-						// Min Card (readonly)
-						+ "<td><input class='form-control' type='text'"
-						+ " value='" + (el.min || 0) + "' readonly></td>"
-
-						// Default Value
-						+ "<td><input class='form-control default-value'"
-						+ " value='" + dt_val + "'" + (is_dt ? " readonly" : "") + ">"
-						+ "</td>"
-
-						+ "</tr>";
+					// Default Value
+					html += "<td><input class='form-control default-value'"
+					+ " value='" + dt_val + "'" + (is_dt ? " readonly" : "") + ">"
+					+ "</td>"
+					+ "<td hidden>" + (el.short || "") + "</td>"
+					+ "<td hidden>" + (el.definition || "") + "</td>"
+					+ "</tr>";
 				});
 
 				html += "</tbody></table>";

@@ -80,7 +80,7 @@ class FHIRResourceGenerator:
 		}
 
 	def generate(self):
-		resource = {"resourceType": self.mapping.fhir_structure_def.split("-", 1)[0]}
+		resource = {"resourceType": self.mapping.resource_type}
 
 		for mapping in self.mapping.map:
 			value = self._get_value(mapping)
@@ -173,7 +173,7 @@ def generate_fhir_resource(frappe_doc):
 	generator = FHIRResourceGenerator(mapping_doc, frappe_doc)
 	fhir_resource = generator.generate()
 
-	return fhir_resource
+	return fhir_resource, mapping_doc.name
 
 
 def upsert_fhir_resource(frappe_doc, method):
@@ -192,11 +192,12 @@ def upsert_fhir_resource(frappe_doc, method):
 	):  # TODO: optimize
 		return
 
-	fhir_data = generate_fhir_resource(frappe_doc)
+	fhir_data, map_name = generate_fhir_resource(frappe_doc)
 
 	key = {
 		"frappe_doctype": frappe_doc.doctype,
 		"frappe_document": frappe_doc.name,
+		"fhir_resource_map": map_name,
 	}
 
 	existing = frappe.get_all("FHIR Resource", filters=key, pluck="name")

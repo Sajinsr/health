@@ -21,7 +21,7 @@ class FHIRResourceMap(Document):
 				self.name = f"{self.name}-{self.fhir_version}"
 
 	def validate(self):
-
+		self.resource_type = self.fhir_structure_def.split("-", 1)[0]
 		missing = [
 			fm.fhir_path for fm in self.map if fm.min > 0 and not fm.frappe_field and not fm.default_value
 		]
@@ -36,10 +36,26 @@ class FHIRResourceMap(Document):
 	@frappe.whitelist()
 	def save_mapped_elements(self, elements):
 
+		self.set("map", [])
 		for el in elements:
-			self.append("map", frappe._dict(el))
+			self.append(
+				"map",
+				{
+					"fhir_path": el.get("fhir_path"),
+					"fhir_datatype": el.get("fhir_datatype"),
+					"min": int(el.get("min") or 0),
+					"max": str(el.get("max") or "1"),
+					"short": el.get("short") or "",
+					"definition": el.get("definition") or "",
+					"is_required": bool(el.get("is_required")),
+					"is_choice_type": bool(el.get("is_choice_type")),
+					"frappe_field": el.get("frappe_field") or None,
+					"default_value": el.get("default_value") or None,
+				},
+			)
 
-		self.save()
+		self.save(ignore_permissions=True)
+		frappe.msgprint(_("FHIR field mappings saved."), alert=True)
 
 	@frappe.whitelist()
 	def preview_fhir_resource(self, docname):
