@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "autoname": "format:FHIR-IG-{fhir_version}-{publisher}",
+ "beta": 1,
+ "creation": "2025-06-09 20:40:34.316571",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ig_name",
+  "version",
+  "fhir_version",
+  "column_break_xkmx",
+  "status",
+  "url",
+  "publisher",
+  "section_break_kiyy",
+  "description",
+  "section_break_nqoe",
+  "dependencies"
+ ],
+ "fields": [
+  {
+   "fieldname": "ig_name",
+   "fieldtype": "Data",
+   "label": "IG Name"
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "URL"
+  },
+  {
+   "description": "Semantic version",
+   "fieldname": "version",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Version"
+  },
+  {
+   "fieldname": "fhir_version",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Version",
+   "options": "FHIR Version"
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Publisher"
+  },
+  {
+   "fieldname": "column_break_xkmx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "\nDraft\nActive\nRetired"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor"
+  },
+  {
+   "fieldname": "section_break_nqoe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "dependencies",
+   "fieldtype": "Table",
+   "label": "Dependencies",
+   "options": "FHIR IG Dependency"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_kiyy",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-10 15:13:43.076134",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Implementation Guide",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "ig_name",
+ "track_changes": 1
+}

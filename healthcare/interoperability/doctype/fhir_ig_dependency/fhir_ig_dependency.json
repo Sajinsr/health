@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-09 21:00:42.443889",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ig",
+  "ig_version",
+  "url"
+ ],
+ "fields": [
+  {
+   "fieldname": "ig",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "IG",
+   "options": "FHIR Implementation Guide",
+   "search_index": 1
+  },
+  {
+   "fetch_from": "ig.version",
+   "fieldname": "ig_version",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "IG Version",
+   "search_index": 1
+  },
+  {
+   "fetch_from": "ig.url",
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "URL",
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-09 21:04:33.410715",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR IG Dependency",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
