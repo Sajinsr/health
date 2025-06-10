@@ -1,6 +1,7 @@
 {
  "actions": [],
  "autoname": "format:{profile_name}-{fhir_version}",
+ "beta": 1,
  "creation": "2025-05-30 21:55:50.404479",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,6 +13,7 @@
   "schema_file",
   "column_break_ygnx",
   "url",
+  "section_break_etdm",
   "description"
  ],
  "fields": [
@@ -56,8 +58,7 @@
   {
    "allow_in_quick_entry": 1,
    "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
+   "fieldtype": "Text Editor"
   },
   {
    "allow_in_quick_entry": 1,
@@ -72,6 +73,11 @@
    "in_list_view": 1,
    "label": "URL",
    "search_index": 1
+  },
+  {
+   "fieldname": "section_break_etdm",
+   "fieldtype": "Section Break",
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
@@ -82,7 +88,7 @@
    "link_fieldname": "fhir_profile"
   }
  ],
- "modified": "2025-06-02 10:50:59.175447",
+ "modified": "2025-06-10 15:10:08.148378",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Profile",
@@ -106,5 +112,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

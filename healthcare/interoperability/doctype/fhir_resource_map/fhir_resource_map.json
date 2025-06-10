@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "beta": 1,
  "creation": "2025-06-01 06:45:53.178979",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,8 +9,9 @@
   "section_break_vaer",
   "fhir_version",
   "fhir_profile",
-  "resource_type",
   "column_break_sbfw",
+  "resource_type",
+  "section_break_aicb",
   "description",
   "section_break_losh",
   "fhir_structure_def",
@@ -78,8 +80,7 @@
   },
   {
    "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
+   "fieldtype": "Text Editor"
   },
   {
    "fieldname": "fhir_structure_def",
@@ -103,12 +104,18 @@
    "in_standard_filter": 1,
    "label": "Resource Type",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_aicb",
+   "fieldtype": "Section Break",
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-09 21:26:15.653504",
+ "modified": "2025-06-10 15:10:42.533849",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",
@@ -142,5 +149,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

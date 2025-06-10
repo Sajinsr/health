@@ -1,16 +1,18 @@
 {
  "actions": [],
  "autoname": "field:fhir_datatype",
+ "beta": 1,
  "creation": "2025-06-07 20:36:09.676611",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "fhir_datatype",
+  "system_defined",
+  "column_break_mxwk",
   "is_primitive",
   "frappe_fieldtype",
   "regex",
-  "system_defined",
-  "column_break_mxwk",
+  "section_break_ahnq",
   "description",
   "section_break_yhef",
   "elements"
@@ -31,7 +33,7 @@
   },
   {
    "fieldname": "description",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "in_list_view": 1,
    "label": "Description",
    "read_only_depends_on": "eval:doc.system_defined"
@@ -76,12 +78,16 @@
    "fieldname": "system_defined",
    "fieldtype": "Check",
    "label": "System Defined"
+  },
+  {
+   "fieldname": "section_break_ahnq",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-08 00:16:02.447273",
+ "modified": "2025-06-10 15:11:34.727002",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Datatype",
@@ -116,5 +122,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

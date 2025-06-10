@@ -1,6 +1,7 @@
 {
  "actions": [],
  "autoname": "field:fhir_version",
+ "beta": 1,
  "creation": "2025-05-30 21:15:03.707315",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,6 +13,7 @@
   "column_break_ytet",
   "standard_status",
   "url",
+  "section_break_vpse",
   "description"
  ],
  "fields": [
@@ -54,8 +56,7 @@
   {
    "allow_in_quick_entry": 1,
    "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
+   "fieldtype": "Text Editor"
   },
   {
    "allow_in_quick_entry": 1,
@@ -71,21 +72,48 @@
    "label": "URL",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "section_break_vpse",
+   "fieldtype": "Section Break",
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [
   {
+   "group": "Masters",
    "link_doctype": "FHIR Structure Definition",
    "link_fieldname": "fhir_version"
   },
   {
+   "group": "Masters",
    "link_doctype": "FHIR Profile",
+   "link_fieldname": "fhir_version"
+  },
+  {
+   "group": "Masters",
+   "link_doctype": "FHIR Resource Map",
+   "link_fieldname": "fhir_version"
+  },
+  {
+   "group": "Endpoints",
+   "link_doctype": "FHIR Capability Statement",
+   "link_fieldname": "fhir_version"
+  },
+  {
+   "group": "Endpoints",
+   "link_doctype": "FHIR Implementation Guide",
+   "link_fieldname": "fhir_version"
+  },
+  {
+   "group": "Resources",
+   "link_doctype": "FHIR Resource",
    "link_fieldname": "fhir_version"
   }
  ],
- "modified": "2025-06-02 10:52:19.899467",
+ "modified": "2025-06-10 15:10:27.334960",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Version",
@@ -109,5 +137,6 @@
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
