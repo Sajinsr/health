@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "autoname": "format:FHIR-CS-{fhir_version}-{publisher}",
+ "beta": 1,
+ "creation": "2025-06-09 17:10:02.769167",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "url",
+  "fhir_version",
+  "column_break_yqpx",
+  "publication_status",
+  "publisher",
+  "section_break_mkdx",
+  "description",
+  "section_break_fjvj",
+  "supported_resources"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "URL"
+  },
+  {
+   "fieldname": "fhir_version",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "FHIR Version",
+   "options": "FHIR Version"
+  },
+  {
+   "fieldname": "publication_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Publication Status",
+   "options": "\nDraft\nActive\nRetired"
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Publisher"
+  },
+  {
+   "fieldname": "column_break_yqpx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor"
+  },
+  {
+   "fieldname": "section_break_fjvj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "supported_resources",
+   "fieldtype": "Table",
+   "label": "Supported Resources",
+   "options": "FHIR Capability Statement Resource"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_mkdx",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-10 15:12:59.136240",
+ "modified_by": "Administrator",
+ "module": "Interoperability",
+ "name": "FHIR Capability Statement",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}
