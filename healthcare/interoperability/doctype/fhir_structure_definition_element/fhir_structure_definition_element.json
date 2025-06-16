@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "beta": 1,
  "creation": "2025-05-31 22:01:25.640961",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -96,7 +97,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-09 16:37:34.132388",
+ "modified": "2025-06-16 17:14:38.372788",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Structure Definition Element",

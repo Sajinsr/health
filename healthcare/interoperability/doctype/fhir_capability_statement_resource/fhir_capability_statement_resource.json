@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "beta": 1,
  "creation": "2025-06-09 17:02:50.892464",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -91,7 +92,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-09 21:44:46.356080",
+ "modified": "2025-06-16 17:14:37.077594",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Capability Statement Resource",

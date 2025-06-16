@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "beta": 1,
  "creation": "2025-06-01 07:57:20.256329",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -33,6 +34,7 @@
    "label": "Frappe Field"
   },
   {
+   "columns": 2,
    "fieldname": "fhir_datatype",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -56,6 +58,7 @@
    "options": "Python"
   },
   {
+   "columns": 3,
    "fieldname": "fhir_path",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -71,14 +74,12 @@
    "columns": 1,
    "fieldname": "min",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "Minimum Cardinality"
   },
   {
    "columns": 1,
    "fieldname": "max",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Maximum Cardinality"
   },
   {
@@ -94,9 +95,11 @@
    "read_only": 1
   },
   {
+   "columns": 1,
    "default": "0",
    "fieldname": "is_required",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "label": "Required",
    "read_only": 1
   },
@@ -112,7 +115,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-08 19:46:32.511544",
+ "modified": "2025-06-16 17:14:37.957320",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Element Map",

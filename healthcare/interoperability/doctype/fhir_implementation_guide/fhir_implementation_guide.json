@@ -43,7 +43,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "FHIR Version",
-   "options": "FHIR Version"
+   "options": "FHIR Version",
+   "search_index": 1
   },
   {
    "fieldname": "publisher",
@@ -87,7 +88,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-10 15:13:43.076134",
+ "modified": "2025-06-16 17:14:36.787150",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Implementation Guide",

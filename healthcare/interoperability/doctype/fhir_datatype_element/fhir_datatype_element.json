@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "beta": 1,
  "creation": "2025-06-07 20:41:20.922167",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -60,7 +61,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-07 22:38:34.575418",
+ "modified": "2025-06-16 17:14:37.235413",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Datatype Element",
