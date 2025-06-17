@@ -9,7 +9,7 @@ frappe.ui.form.on('Patient', {
 			}
 			if (frm.doc.abha_number) {
 				frm.add_custom_button(__('Verify ABHA Number'), function () {
-					verify_health_id(frm)
+					verify_health_id(frm, frm.doc.abha_number)
 				}, 'ABDM');
 			}
 			if (!(frm.doc.abha_address || frm.doc.abha_number)) {
@@ -59,7 +59,7 @@ let search_by_abha_address = function (frm) {
 						'req_type': 'Health ID'
 					},
 					freeze: true,
-					freeze_message: __('<br><br>Searching...'),
+					freeze_message: __('Searching...'),
 					callback: function (data) {
 						if (data.message['healthIdNumber']) {
 							show_message(dialog, 'Status:' + data.message['status'], 'green', '', 'abha_address')
@@ -72,8 +72,8 @@ let search_by_abha_address = function (frm) {
 							}
 						} else {
 							show_message(dialog, data.message.message, '#fa6969',
-											data.message.details[0]['message'], 'abha_address')
-							}
+								data.message.details[0]['message'], 'abha_address')
+						}
 					}
 				});
 			}
@@ -170,7 +170,7 @@ let verify_health_id = function (frm, recieved_abha_number = '') {
 							let txn_id = r.message['txnId'];
 							if (txn_id) {
 								show_message(d, 'Successfully Sent OTP', 'green', '', 'auth_method')
-								verify_auth_otp(r, d)
+								verify_auth_otp(r, d, frm.doc.name)
 							} else {
 								if (r.message.message && r.message.details[0]['message']) {
 									show_message(d, r.message.message, 'red', r.message.details[0]['message'], 'auth_method')
@@ -184,7 +184,7 @@ let verify_health_id = function (frm, recieved_abha_number = '') {
 						}
 					});
 				}
-		])
+			])
 		},
 		secondary_action_label: 'Save',
 		secondary_action(values) {
@@ -219,7 +219,7 @@ let verify_health_id = function (frm, recieved_abha_number = '') {
 }
 
 // authorization otp verification
-let verify_auth_otp = function(r, d) {
+let verify_auth_otp = function(r, d, patient) {
 	let dialog = new frappe.ui.Dialog({
 		title: 'Authentication OTP',
 		fields: [
@@ -239,10 +239,11 @@ let verify_auth_otp = function(r, d) {
 				args: {
 					'otp': dialog.get_value('otp'),
 					'txnId': r.message['txnId'],
-					'auth_method': d.get_value('auth_method')
+					'auth_method': d.get_value('auth_method'),
+					'patient': patient
 				},
 				freeze: true,
-				freeze_message: __(`<br><br>Verifying OTP... <br>
+				freeze_message: __(`Verifying OTP... <br>
 					<small>Please note, this may take a while</small>`),
 				callback: function (data) {
 					if (data.message) {
@@ -265,7 +266,9 @@ let verify_auth_otp = function(r, d) {
 							}, 10);
 						}
 						if (data.message[1]) {
-							$(d.fields_dict.qr_data.$wrapper).html("<img src='"+ data.message[1] + "'>")
+							$(d.fields_dict.qr_data.$wrapper).html(
+								"<img src='" + data.message[1] + "' style='max-width:100%; height:auto; border:1px solid #ccc; border-radius:6px;'>"
+							);
 							d.set_values({
 								'abha_card': data.message[1]
 							});
@@ -284,6 +287,7 @@ let verify_auth_otp = function(r, d) {
 let create_abha = function (frm) {
 	let d = new frappe.ui.Dialog({
 		title: 'Create ABHA',
+		size: "medium",
 		fields: [
 			{
 				label: 'Enter Aadhaar',
@@ -297,19 +301,11 @@ let create_abha = function (frm) {
 				fieldtype: 'Section Break'
 			},
 			{
+				label:'Patient Consent Form',
 				fieldname: 'patient_consent',
 				fieldtype: 'Link',
 				options: 'Terms and Conditions',
 				read_only: 0
-			},
-			{
-				fieldname: 'cb1',
-				fieldtype: 'Column Break',
-			},
-			{
-				label: 'Button',
-				fieldname: 'print_btn',
-				fieldtype: 'HTML'
 			},
 			{
 				fieldname: 'sb2',
@@ -317,30 +313,15 @@ let create_abha = function (frm) {
 				hide_border: 1
 			},
 			{
+				label: 'Attach Patient Consent',
 				fieldname: 'patient_consent_attach',
 				fieldtype: 'Attach',
-				description: `Please attach patient's signed consent for using
-						their Aadhaar for ABHA creation`
-			},
-			{
-				label: 'OR',
-				fieldname: 'or',
-				fieldtype: 'Heading',
-				hidden: 1
-			},
-			{
-				label: 'Received Consent',
-				fieldname: 'received_consent',
-				fieldtype: 'Check',
-				default: 0,
-				description: `Check this to confirm that patient has
-					provided consent to use Aadhaar for ABHA Registration`,
-				hidden: 1
+				description: `Please attach patient's signed consent for using their Aadhaar for ABHA creation`
 			},
 		],
 		primary_action_label: 'Send OTP',
 		primary_action(values) {
-			if (!d.get_value('received_consent') && !d.get_value('patient_consent_attach')) {
+			if (!d.get_value('patient_consent_attach')) {
 				frappe.throw({
 					message: __(`Patient Consent is required for ABHA creation`),
 					title: __("Consent Required")
@@ -352,34 +333,44 @@ let create_abha = function (frm) {
 		}
 	});
 
-	let print_button = d.fields_dict.print_btn.$wrapper;
+	let $field_wrapper = d.fields_dict.patient_consent.$wrapper;
+	let $control_input = $field_wrapper.find('.control-input');
 
-	print_button.html(
-		`<br><button class="btn btn-sm" style="float:left;" title="Print">
-		<svg class="icon  icon-sm" style="">
-		<use class="" href="#icon-printer"></use></svg>
-		</button>`
-	);
+	$control_input.find('.print-icon-btn').remove();
 
-	print_button.on('click', 'button', function() {
-		frappe.db.get_value('Terms and Conditions', d.get_value('patient_consent'), 'terms')
+	let $print_icon = $(`
+		<div class="print-icon-btn" style="position: absolute; right: 35px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+			<svg class="icon icon-sm">
+				<use href="#icon-printer"></use>
+			</svg>
+		</div>
+	`);
+
+	$control_input.css('position', 'relative').append($print_icon);
+	$print_icon.on('click', function () {
+		let consent_doc = d.get_value('patient_consent');
+		if (!consent_doc) {
+			frappe.msgprint("Please select a Patient Consent Form first.");
+			return;
+		}
+		frappe.db.get_value('Terms and Conditions', consent_doc, 'terms')
 		.then(r => {
-			let result = frappe.render_template(r.message.terms, {"doc" : {}})
-			frappe.render_pdf(result, {orientation:"Portrait"});
-		})
-	})
+			let result = frappe.render_template(r.message.terms, { "doc": {} });
+			frappe.render_pdf(result, { orientation: "Portrait", "report_name": "ABDM Consent Form" });
+		});
+	});
 
 	frappe.db.get_value('ABDM Settings', {
 		company: frappe.defaults.get_user_default("Company"),
 		default: 1
 	}, 'patient_aadhaar_consent')
-    .then(r => {
+	.then(r => {
 		if (r.message.patient_aadhaar_consent) {
 			d.set_values({
 				'patient_consent': r.message.patient_aadhaar_consent
 			});
 		}
-    })
+	})
 	d.show();
 }
 
@@ -530,7 +521,7 @@ let setup_search_btn = function(dialog) {
 					'req_type': 'Health ID'
 				},
 				freeze: true,
-				freeze_message: __('<br><br>Verifying...'),
+				freeze_message: __('Verifying...'),
 				callback: function (data) {
 					if (data.message['status'] == false) {
 						show_message(dialog, 'ABHA Address can be used', 'green', '', 'username')
@@ -639,7 +630,7 @@ let create_abha_with_aadhaar = function(frm, d) {
 								'req_type': 'Health ID'
 							},
 							freeze: true,
-							freeze_message: __(`<br><br><br>Creating Health ID <br>
+							freeze_message: __(`Creating Health ID <br>
 								<small>Please note, this may take a while</small>`),
 							callback: function (data) {
 								if (data.message['healthIdNumber']) {
@@ -751,7 +742,7 @@ let setup_resend_otp_btn = function(dialog, txn_id) {
 					'req_type': 'Health ID'
 				},
 				freeze: true,
-				freeze_message: __('<br><br>Resending Aadhaar OTP...'),
+				freeze_message: __('Resending Aadhaar OTP...'),
 				callback: function (data) {
 					if (data.message['txnId']) {
 						show_message(dialog, 'Successfully Resent Aadhaar OTP', 'green', '', 'otp')
@@ -811,7 +802,7 @@ let setup_send_otp_btn = function(dialog, txn_id = '') {
 				method: 'healthcare.regional.india.abdm.utils.abdm_request',
 				args: args,
 				freeze: true,
-				freeze_message: __('<br><br>Verifying...'),
+				freeze_message: __('Verifying...'),
 				callback: function (data) {
 					if (data.message['txnId']) {
 						// setup_verify_otp_btn(dialog, data.message['txnId'])
@@ -875,7 +866,7 @@ let verify_mobile_otp_dialog = function(dialog, txn_id, url_key) {
 				method: 'healthcare.regional.india.abdm.utils.abdm_request',
 				args: args,
 				freeze: true,
-				freeze_message: __('<br><br>Verifying...'),
+				freeze_message: __('Verifying...'),
 				callback: function (data) {
 					show_message(dialog, '', '', '', 'mobile')
 					if (data.message['txnId'] || data.message['token']) {
@@ -932,7 +923,7 @@ let show_id_card_dialog = function(frm, token) {
 			'patient_name': frm.doc.name
 		},
 		freeze: true,
-		freeze_message: __(`<br><br><br>Getting Health ID`),
+		freeze_message: __(`Getting Health ID`),
 		callback: function (data) {
 			if (data.message['file_url']) {
 				// frm.set_value('abha_card', data.message['file_url'])

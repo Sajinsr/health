@@ -53,11 +53,20 @@ def get_authorization_token():
 		req.insert(ignore_permissions=True)
 		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
 		frappe.log_error(message=traceback, title="Cant create session")
-		return auth_base_url, None, None
+		return auth_base_url, None
 
 
 @frappe.whitelist()
-def abdm_request(payload, url_key, req_type, rec_headers=None, to_be_enc=None, patient_name=None):
+def abdm_request(
+	payload=None,
+	url_key=None,
+	req_type=None,
+	rec_headers=None,
+	to_be_enc=None,
+	patient_name=None,
+	access_token=None,
+	token_type=None,
+):
 	if payload and isinstance(payload, str):
 		payload = json.loads(payload)
 
@@ -84,7 +93,8 @@ def abdm_request(payload, url_key, req_type, rec_headers=None, to_be_enc=None, p
 			payload[to_be_enc] = payload.pop("to_encrypt")
 			payload[to_be_enc] = encrypted["encrypted_msg"]
 
-	access_token, token_type = get_authorization_token()
+	if not access_token:
+		access_token, token_type = get_authorization_token()
 
 	if not access_token:
 		frappe.throw(
@@ -129,14 +139,20 @@ def abdm_request(payload, url_key, req_type, rec_headers=None, to_be_enc=None, p
 			_file.save()
 			frappe.db.commit()
 			return _file
-		req.response = json.dumps(response.json(), indent=4)
+		if response.json() and isinstance(response.json(), dict):
+			req.response = json.dumps(response.json(), indent=4)
+		else:
+			req.response = response.text
 		req.status = "Granted"
 		req.insert(ignore_permissions=True)
 		return response.json()
 
 	except Exception as e:
 		req.traceback = e
-		req.response = json.dumps(response.json(), indent=4)
+		if response.json() and isinstance(response.json(), dict):
+			req.response = json.dumps(response.json(), indent=4)
+		else:
+			req.response = response.text
 		req.status = "Revoked"
 		req.insert(ignore_permissions=True)
 		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
@@ -205,7 +221,7 @@ def get_rsa_encrypted_message(message, pub_key):
 
 
 @frappe.whitelist()
-def get_health_data(otp, txnId, auth_method):
+def get_health_data(otp, txnId, auth_method, patient=None):
 	confirm_w_otp_payload = {"to_encrypt": otp, "txnId": txnId}
 	if auth_method == "AADHAAR_OTP":
 		url_key = "confirm_w_aadhaar_otp"
@@ -215,7 +231,7 @@ def get_health_data(otp, txnId, auth_method):
 	response = abdm_request(confirm_w_otp_payload, url_key, "Health ID", "", "otp")
 	abha_url = ""
 	if response and response.get("token"):
-		abha_url = get_abha_card(response["token"])
+		abha_url = get_abha_card(response["token"], patient)
 		header = {"X-Token": "Bearer " + response["token"]}
 		response = abdm_request("", "get_acc_info", "Health ID", header, "")
 	return response, abha_url
@@ -255,7 +271,7 @@ def set_consent_attachment_details(doc, method=None):
 				)
 
 
-def get_abha_card(token):
+def get_abha_card(token, patient=None):
 	header = {"X-Token": "Bearer " + token}
-	response = abdm_request("", "get_card", "Health ID", header, "")
+	response = abdm_request("", "get_card", "Health ID", header, "", patient_name=patient)
 	return response.get("file_url")
