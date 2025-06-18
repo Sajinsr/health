@@ -9,7 +9,8 @@
   "fhir_version",
   "fhir_profile",
   "section_break_vaer",
-  "fhir_resource",
+  "fhir_structure_def",
+  "resource_type",
   "sd_version",
   "base",
   "column_break_sbfw",
@@ -21,8 +22,6 @@
   "section_break_losh",
   "frappe_doctype",
   "column_break_nvkk",
-  "resource_type",
-  "fhir_structure_def",
   "section_break_aicb",
   "description",
   "section_break_nqfe",
@@ -102,10 +101,9 @@
   {
    "fieldname": "fhir_structure_def",
    "fieldtype": "Link",
-   "hidden": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "FHIR Structure Def Deprecated \u26a0\ufe0f ",
+   "label": "FHIR Structure Def",
    "options": "FHIR Structure Definition"
   },
   {
@@ -126,13 +124,6 @@
    "fieldname": "section_break_aicb",
    "fieldtype": "Section Break",
    "label": "Description"
-  },
-  {
-   "fieldname": "fhir_resource",
-   "fieldtype": "Select",
-   "label": "FHIR Resource",
-   "reqd": 1,
-   "search_index": 1
   },
   {
    "fieldname": "sd_version",
@@ -190,7 +181,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-16 17:14:38.159959",
+ "modified": "2025-06-16 18:16:28.242490",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",

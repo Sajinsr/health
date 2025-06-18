@@ -66,7 +66,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 						args: { docname: docname },
 						callback(res) {
 
-							const json = JSON.stringify(res.message, null, 2);
+							const json = JSON.stringify(res.message[0], null, 2);
 							const blob = new Blob([json], { type: 'application/json' });
 							const url = URL.createObjectURL(blob);
 							const downloadId = frappe.utils.get_random(8);
@@ -75,7 +75,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 								<pre style="max-height: 600px; overflow: auto;">${frappe.utils.escape_html(json)}</pre>
 								<div style="margin-top: 1rem;">
 									<a id="download-${downloadId}" href="${url}" download="${frappe_doctype}-${docname}-Marley-FHIR.json" class="btn btn-sm btn-primary">
-										${__("Download FHIR JSON")}
+										${__("Download JSON")}
 									</a>
 								</div>
 							`;
@@ -209,16 +209,13 @@ function show_map_dialog(frm) {
 
 					// if already mapped, set that
 					const map = frm.doc.map.find(({ fhir_path }) => fhir_path === el.path);
-					const id_val = is_id ? "ID" : ((frm.doc.map.length ? map.frappe_field : "") || "");
-					const dt_val = is_dt ? frm.doc.frappe_doctype : ((frm.doc.map.length ? map.default_value : "") || "");
+					const id_val = is_id ? "ID" : ((map ? map.frappe_field : "") || "");
+					const dt_val = is_dt ? frm.doc.frappe_doctype : ((map ? map.default_value : "") || "");
 
 					// fhir element paths (not readonly cos of choice)
 					html += `<tr data-path=${el.path}>`
 					+ "<td><input class='form-control' type='text'"
 					+ " value='" + (el.path || "") + `' ${!is_editable ? " readonly" : ""}></td>`
-
-					//  "<tr data-path='" + el.path + "'>" // new row
-					// + "<td>" + el.path + "</td>"
 
 					// Data Type (not readonly cos of choice)
 					+ "<td><input class='form-control' type='text'"

@@ -74,7 +74,12 @@ class FHIRDatatypeBuilder:
 class FHIRResourceGenerator:
 	def __init__(self, mapping_doc, frappe_doc=None):
 		self.mapping = mapping_doc
-		self.doc = frappe_doc
+
+		if isinstance(frappe_doc, dict):
+			self.doc = frappe.get_doc(frappe_doc)
+		else:
+			self.doc = frappe_doc
+
 		self.datatypes = {
 			d.name: d for d in frappe.get_all("FHIR Datatype", fields=["name", "is_primitive", "regex"])
 		}
