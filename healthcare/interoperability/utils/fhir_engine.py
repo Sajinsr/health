@@ -210,7 +210,7 @@ def upsert_fhir_resource(frappe_doc, method):
 	data = {
 		**key,
 		"fhir_resource_type": fhir_data.get("resourceType"),
-		"fhir_resource": json.dumps(fhir_data, indent=2),
+		"fhir_resource": json.dumps(fhir_data, indent=2, default=str),
 	}
 
 	if existing:
