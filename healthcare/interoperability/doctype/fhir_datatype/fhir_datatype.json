@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "field:fhir_datatype",
  "beta": 1,
  "creation": "2025-06-07 20:36:09.676611",
@@ -63,13 +64,13 @@
    "fieldname": "elements",
    "fieldtype": "Table",
    "label": "Elements",
-   "options": "FHIR Datatype Element"
+   "options": "FHIR Datatype Element",
+   "read_only_depends_on": "eval:doc.system_defined"
   },
   {
    "depends_on": "eval:doc.is_primitive",
    "fieldname": "regex",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Regex",
    "read_only_depends_on": "eval:doc.system_defined"
   },
@@ -77,7 +78,8 @@
    "default": "0",
    "fieldname": "system_defined",
    "fieldtype": "Check",
-   "label": "System Defined"
+   "label": "System Defined",
+   "read_only_depends_on": "eval:doc.system_defined"
   },
   {
    "fieldname": "section_break_ahnq",
@@ -87,7 +89,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-16 17:14:37.457556",
+ "modified": "2025-06-21 14:45:16.615978",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Datatype",
