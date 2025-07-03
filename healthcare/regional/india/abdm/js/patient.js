@@ -17,6 +17,11 @@ frappe.ui.form.on('Patient', {
 					create_abha(frm)
 				}, 'ABDM');
 			}
+			if (frm.doc.abha_number && frm.doc.abha_address){
+				frm.add_custom_button(__('Generate Link Token'), function () {
+					generate_link_token(frm);
+				}, 'ABDM');
+			}
 		} else {
 			hide_field(['abha_number', 'abha_address']);
 		}
@@ -910,42 +915,114 @@ let verify_mobile_otp_dialog = function(dialog, txn_id, url_key) {
 let show_id_card_dialog = function(frm, token) {
 	frappe.run_serially([
 		() =>frm.save(),
-		() =>{frappe.call({
-		method: 'healthcare.regional.india.abdm.utils.abdm_request',
-		args: {
-			'payload': {
-			},
-			'url_key': 'get_card',
-			'req_type': 'Health ID',
-			'rec_headers': {
-				'X-Token': 'Bearer '+ token
-			},
-			'patient_name': frm.doc.name
-		},
-		freeze: true,
-		freeze_message: __(`Getting Health ID`),
-		callback: function (data) {
-			if (data.message['file_url']) {
-				// frm.set_value('abha_card', data.message['file_url'])
-				let abha_id_dialog = new frappe.ui.Dialog({
-					title: 'ABHA Card',
-					fields: [
-						{
-							fieldname: 'abha_card_html',
-							fieldtype: 'HTML',
-						}
-					],
-				primary_action_label: 'Print',
-				primary_action(values) {
-					let result = "<img src='"+ data.message['file_url'] + "'>"
-					frappe.render_pdf(result, {orientation:"Landscape"});
+		() =>{
+			frappe.call({
+				method: 'healthcare.regional.india.abdm.utils.abdm_request',
+				args: {
+					'payload': {
+					},
+					'url_key': 'get_card',
+					'req_type': 'Health ID',
+					'rec_headers': {
+						'X-Token': 'Bearer '+ token
+					},
+					'patient_name': frm.doc.name
 				},
-				})
-				$(abha_id_dialog.fields_dict.abha_card_html.$wrapper).html("<img src='"+ data.message['file_url'] + "'>")
-				abha_id_dialog.show();
-			}
+				freeze: true,
+				freeze_message: __(`Getting Health ID`),
+				callback: function (data) {
+					if (data.message['file_url']) {
+						// frm.set_value('abha_card', data.message['file_url'])
+						let abha_id_dialog = new frappe.ui.Dialog({
+							title: 'ABHA Card',
+							fields: [
+								{
+									fieldname: 'abha_card_html',
+									fieldtype: 'HTML',
+								}
+							],
+							primary_action_label: 'Print',
+							primary_action(values) {
+								let result = "<img src='"+ data.message['file_url'] + "'>"
+								frappe.render_pdf(result, {orientation:"Landscape"});
+							},
+						})
+						$(abha_id_dialog.fields_dict.abha_card_html.$wrapper).html("<img src='"+ data.message['file_url'] + "'>")
+						abha_id_dialog.show();
+					}
+				}
+			})
 		}
+	])
+}
+
+let generate_link_token = function (frm) {
+	let dialog = new frappe.ui.Dialog({
+		title: 'Generate Link Token',
+		fields: [
+			{
+				label: 'ABHA Address',
+				fieldname: 'abha_address',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'ABHA Number',
+				fieldname: 'abha_number',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'Name',
+				fieldname: 'name',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'Gender',
+				fieldname: 'gender',
+				fieldtype: 'Link',
+				options: 'Gender',
+				reqd: 1
+			},
+			{
+				label: 'Year of Birth',
+				fieldname: 'year_of_birth',
+				fieldtype: 'Int',
+				reqd: 1
+			}
+		],
+		primary_action_label: 'Generate',
+		primary_action(values) {
+			frappe.call({
+				method: 'healthcare.regional.india.abdm.utils.generate_hip_token',
+				args: values,
+				freeze: true,
+				freeze_message: __('Generating...'),
+				callback: function (data) {
+					dialog.hide();
+					if (data.message.error){
+						frappe.show_alert({
+							message: __(data.message.error.message),
+							indicator: 'red'
+						}, 5);
+					} else {
+						frappe.show_alert({
+							message: __('Request to Generate Link Token Success'),
+							indicator: 'green'
+						}, 5);
+					}
+				}
+			});
+		},
+	});
+
+	dialog.set_values({
+		"abha_address": frm.doc.abha_address,
+		"abha_number": frm.doc.abha_number,
+		"name": frm.doc.patient_name,
+		"gender": frm.doc.sex,
+		"year_of_birth": moment(frm.doc.dob, "YYYY-MM-DD").year()
 	})
-	}
-])
+	dialog.show();
 }
