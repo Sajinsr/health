@@ -402,6 +402,8 @@ def create_observation(service_request, appointment=None):
 
 
 def insert_diagnostic_report(doc, sample_collection=None):
+	# if sample_collection:
+	# 	sample_collection = sample_collection.get("name")
 	diagnostic_report = frappe.new_doc("Diagnostic Report")
 	diagnostic_report.company = doc.company
 	diagnostic_report.patient = doc.patient
