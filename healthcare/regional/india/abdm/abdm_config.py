@@ -60,21 +60,30 @@ config = {
 		"url": "/abha/api/v3/profile/account",
 		"encrypted": False,
 	},
-	# "get_suggestions": {
-	# 	"method": "GET",
-	# 	"url": "/abha/api/v3/enrollment/enrol/suggestion",
-	# 	"encrypted": False,
-	# },
-	# "resend_aadhaar_otp": {
-	# 	"method": "POST",
-	# 	"url": "/v2/registration/aadhaar/resendAadhaarOtp",
-	# 	"encrypted": False,
-	# },
-	# "prefered_abha": {
-	# 	"method": "POST",
-	# 	"url": "/abha/api/v3/enrollment/enrol/abha-address",
-	# 	"encrypted": False,
-	# },
+	"hiecm_session": {"method": "POST", "url": "/gateway/v3/sessions", "encrypted": False},
+	"update_bridge": {"method": "PATCH", "url": "/gateway/v3/bridge/url", "encrypted": False},
+	"register_bridge": {
+		"method": "POST",
+		"url": "/v1/bridges/MutipleHRPAddUpdateServices",
+		"encrypted": False,
+	},
+	"find_bridge_by_service_id": {
+		"method": "GET",
+		"url": "/gateway/v3/bridge-service/serviceId",
+		"encrypted": False,
+	},
+	"find_services_by_bridge_id": {
+		"method": "GET",
+		"url": "/gateway/v3/bridge-services",
+		"encrypted": False,
+	},
+	"hip_generate_token": {"method": "POST", "url": "/v3/token/generate-token", "encrypted": False},
+	"link_carecontext": {"method": "POST", "url": "/hip/v3/link/carecontext", "encrypted": False},
+	"link_carecontext_notify": {
+		"method": "POST",
+		"url": "hip/v3/link/context/notify",
+		"encrypted": False,
+	},
 }
 
 

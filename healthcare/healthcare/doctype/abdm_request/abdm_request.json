@@ -11,17 +11,22 @@
   "column_break_3",
   "status",
   "url",
+  "patient",
   "section_break_4",
   "request",
-  "traceback",
+  "header",
   "column_break_6",
-  "response"
+  "response",
+  "traceback",
+  "section_break_yowv",
+  "token"
  ],
  "fields": [
   {
    "fieldname": "request_name",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Request Name",
    "read_only": 1
   },
@@ -29,6 +34,7 @@
    "default": "Now",
    "fieldname": "request_date",
    "fieldtype": "Datetime",
+   "in_standard_filter": 1,
    "label": "Request Date",
    "read_only": 1
   },
@@ -75,12 +81,36 @@
    "fieldtype": "Code",
    "label": "Traceback",
    "read_only": 1
+  },
+  {
+   "fieldname": "header",
+   "fieldtype": "Code",
+   "label": "Header",
+   "read_only": 1
+  },
+  {
+   "fieldname": "patient",
+   "fieldtype": "Link",
+   "label": "Patient",
+   "options": "Patient",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_yowv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "token",
+   "fieldtype": "Code",
+   "label": "Token",
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-03-24 11:11:01.555036",
+ "modified": "2025-06-22 19:55:32.897113",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Request",
@@ -99,6 +129,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
