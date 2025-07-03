@@ -186,6 +186,7 @@ before_tests = "healthcare.healthcare.utils.before_tests"
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "healthcare.event.get_events"
 # }
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -317,3 +318,5 @@ treeviews = [
 company_data_to_be_ignored = [
 	"Healthcare Service Unit",
 ]
+
+page_renderer = ["healthcare.regional.india.abdm.handler.AbdmHandler"]

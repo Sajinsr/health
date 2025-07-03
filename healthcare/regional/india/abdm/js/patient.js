@@ -19,6 +19,11 @@ frappe.ui.form.on("Patient", {
 					create_abha(frm)
 				}, "ABDM");
 			}
+			if (frm.doc.abha_number && frm.doc.abha_address){
+				frm.add_custom_button(__('Generate Link Token'), function () {
+					generate_link_token(frm);
+				}, 'ABDM');
+			}
 		} else {
 			frm.toggle_display("abha_address", false);
 			frm.toggle_display("abha_number", false);
@@ -1145,3 +1150,74 @@ let show_message = function (dialog, message, color, details, field) {
 		${details ? "Details: " + details + "</div>" : "</div>"}`
 	field.refresh();
 };
+
+let generate_link_token = function (frm) {
+	let dialog = new frappe.ui.Dialog({
+		title: 'Generate Link Token',
+		fields: [
+			{
+				label: 'ABHA Address',
+				fieldname: 'abha_address',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'ABHA Number',
+				fieldname: 'abha_number',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'Name',
+				fieldname: 'name',
+				fieldtype: 'Data',
+				reqd: 1
+			},
+			{
+				label: 'Gender',
+				fieldname: 'gender',
+				fieldtype: 'Link',
+				options: 'Gender',
+				reqd: 1
+			},
+			{
+				label: 'Year of Birth',
+				fieldname: 'year_of_birth',
+				fieldtype: 'Int',
+				reqd: 1
+			}
+		],
+		primary_action_label: 'Generate',
+		primary_action(values) {
+			frappe.call({
+				method: 'healthcare.regional.india.abdm.utils.generate_hip_token',
+				args: values,
+				freeze: true,
+				freeze_message: __('Generating...'),
+				callback: function (data) {
+					dialog.hide();
+					if (data.message.error){
+						frappe.show_alert({
+							message: __(data.message.error.message),
+							indicator: 'red'
+						}, 5);
+					} else {
+						frappe.show_alert({
+							message: __('Request to Generate Link Token Success'),
+							indicator: 'green'
+						}, 5);
+					}
+				}
+			});
+		},
+	});
+
+	dialog.set_values({
+		"abha_address": frm.doc.abha_address,
+		"abha_number": frm.doc.abha_number,
+		"name": frm.doc.patient_name,
+		"gender": frm.doc.sex,
+		"year_of_birth": moment(frm.doc.dob, "YYYY-MM-DD").year()
+	})
+	dialog.show();
+}
