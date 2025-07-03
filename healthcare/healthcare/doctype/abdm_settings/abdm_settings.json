@@ -28,6 +28,10 @@
   "bridge_url",
   "column_break_empt",
   "x_cm_id",
+  "auth_tab",
+  "user_api_key",
+  "column_break_vjpy",
+  "user_api_secret",
   "patient_consent_template_tab",
   "consent_section_section",
   "patient_aadhaar_consent"
@@ -152,12 +156,35 @@
    "fieldname": "bridge_url",
    "fieldtype": "Data",
    "label": "Bridge URL"
+  },
+  {
+   "fieldname": "auth_tab",
+   "fieldtype": "Tab Break",
+   "label": "Auth"
+  },
+  {
+   "fieldname": "user_api_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User API Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_vjpy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_api_secret",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User API secret",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-23 16:16:54.409000",
+ "modified": "2025-07-24 17:28:45.812189",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Settings",

@@ -9,6 +9,7 @@
   "request_name",
   "request_date",
   "column_break_3",
+  "company",
   "status",
   "url",
   "patient",
@@ -19,6 +20,8 @@
   "response",
   "traceback",
   "section_break_yowv",
+  "transaction_id",
+  "request_id",
   "token"
  ],
  "fields": [
@@ -34,6 +37,7 @@
    "default": "Now",
    "fieldname": "request_date",
    "fieldtype": "Datetime",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Request Date",
    "read_only": 1
@@ -74,6 +78,7 @@
   {
    "fieldname": "url",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "URL"
   },
   {
@@ -91,6 +96,8 @@
   {
    "fieldname": "patient",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Patient",
    "options": "Patient",
    "read_only": 1
@@ -104,13 +111,33 @@
    "fieldtype": "Code",
    "label": "Token",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "label": "Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "request_id",
+   "fieldtype": "Data",
+   "label": "Request ID",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-22 19:55:32.897113",
+ "modified": "2025-07-10 16:18:42.627820",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Request",

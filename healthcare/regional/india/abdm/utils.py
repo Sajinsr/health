@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 
 import frappe
-from frappe.utils import add_to_date, format_date, getdate
+from frappe.utils import add_to_date, format_date, getdate, now
 
 from healthcare.regional.india.abdm.abdm_config import get_url
 
@@ -342,19 +342,19 @@ def update_bridge_url():
 	try:
 		response = request_and_post(url, payload, headers, config.get("method"), "Update Bridge URL")
 		message = "Bridge URL updated"
-		indicator = "Green"
+		indicator = "green"
 		if response and response[0].get("error"):
 			error = response[0].get("error")
 			message = error.get("message")
-			indicator = "Red"
+			indicator = "red"
 		frappe.msgprint(message, alert=True, indicator=indicator)
 	except Exception as e:
 		frappe.log_error(message=e, title="Failed to Update Bridge URL")
 
 
 @frappe.whitelist()
-def register_bridge_service():
-	settings = get_abdm_settings()
+def register_bridge_service(company=None):
+	settings = get_abdm_settings(company)
 
 	if not settings.facility_base_url:
 		frappe.throw(
@@ -391,11 +391,11 @@ def register_bridge_service():
 			url, payload, headers, config.get("method"), "Register Bridge Service"
 		)
 		message = "Bridge Service Registered"
-		indicator = "Green"
+		indicator = "green"
 		if response and response[0].get("error"):
 			error = response[0].get("error")
 			message = error.get("message")
-			indicator = "Red"
+			indicator = "red"
 		frappe.msgprint(message, alert=True, indicator=indicator)
 	except Exception as e:
 		frappe.log_error(message=e, title="Failed to Register Bridge Service")
@@ -508,6 +508,13 @@ def generate_hip_token(**args):
 		response = request_and_post(
 			url, payload, headers, config.get("method"), "Generate HIP Link Token"
 		)
+		message = "Generate HIP Link Token Requested"
+		indicator = "green"
+		if response and response.get("error"):
+			error = response.get("error")
+			message = error.get("message")
+			indicator = "red"
+		frappe.msgprint(message, alert=True, indicator=indicator)
 		return response
 	except Exception as e:
 		frappe.log_error(message=e, title="Failed to Generate HIP Token")
@@ -537,8 +544,8 @@ def link_carecontext(doctype=None, docname=None):
 				alert=True,
 			)
 			return frappe.get_cached_doc("Patient", doc.patient)
-
-		settings = get_abdm_settings()
+		company = doc.get("company") or None
+		settings = get_abdm_settings(company)
 
 		if not settings.consent_base_url:
 			frappe.throw(
@@ -560,7 +567,7 @@ def link_carecontext(doctype=None, docname=None):
 			"abhaAddress": abha_address,
 			"patient": [
 				{
-					"referenceNumber": doc.name,
+					"referenceNumber": doc.patient if doc.patient else doc.name,
 					"display": display,
 					"careContexts": carecontext,
 					"hiType": hitype,
@@ -581,16 +588,157 @@ def link_carecontext(doctype=None, docname=None):
 		try:
 			response = request_and_post(url, payload, headers, config.get("method"), "Link Carecontext")
 			message = "Linking Carecontext Requested"
-			indicator = "Green"
-			if response and response[0].get("error"):
-				error = response[0].get("error")
+			indicator = "green"
+
+			if response and response.get("error"):
+				error = response.get("error")
 				message = error.get("message")
-				indicator = "Red"
+				indicator = "red"
 			frappe.msgprint(message, alert=True, indicator=indicator)
 		except Exception as e:
-			frappe.log_error(message=e, title="Failed to Link Carecontext")
+			frappe.log_error(message=str(e), title="Failed to Link Carecontext")
 	else:
 		frappe.throw("Patient is mandatory to link the carecontext")
+
+
+# User Initiated Linking
+@frappe.whitelist()
+def on_discover(abha_address=None, transaction_id=None, request_id=None):
+	settings = get_abdm_settings()
+
+	if not settings.consent_base_url:
+		frappe.throw(
+			title="Not Configured",
+			msg="Consent Management Base URL not configured in ABDM Settings!",
+		)
+
+	token = get_token_for_hiecm()
+	config = get_url("on_discover")
+
+	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
+		"accessToken"
+	)
+	url = settings.consent_base_url + config.get("url")
+	payload = {
+		"transactionId": transaction_id,
+		"patient": get_patient_details(abha_address),
+		"matchedBy": ["MR"],
+		"response": {"requestId": request_id},
+	}
+	headers = {
+		"Content-Type": "application/json",
+		"REQUEST-ID": generate_unique_id(),
+		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+		"X-CM-ID": settings.x_cm_id,
+		"Authorization": authorization,
+	}
+
+	try:
+		request_and_post(url, payload, headers, config.get("method"), "Process On-discover Request")
+	except Exception as e:
+		frappe.log_error(message=e, title="Failed to Process On-discover Request")
+
+
+@frappe.whitelist()
+def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
+	settings = get_abdm_settings()
+
+	if not settings.consent_base_url:
+		frappe.throw(
+			title="Not Configured",
+			msg="Consent Management Base URL not configured in ABDM Settings!",
+		)
+
+	token = get_token_for_hiecm()
+	config = get_url("on_init")
+
+	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
+		"accessToken"
+	)
+	url = settings.consent_base_url + config.get("url")
+	otp_expiry = add_to_date(now(), minutes=15)
+	payload = {
+		"transactionId": transaction_id,
+		"link": {
+			"referenceNumber": generate_unique_id(),
+			"authenticationType": "DIRECT",
+			"meta": {
+				"communicationMedium": "MOBILE",
+				"communicationHint": "OTP",
+				"communicationExpiry": otp_expiry.replace(" ", "T") + "Z",
+			},
+		},
+		"response": {"requestId": request_id},
+	}
+	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
+	mobile_no = "" #get_patient_mobile_number(patient, transaction_id)
+	headers = {
+		"Content-Type": "application/json",
+		"REQUEST-ID": generate_unique_id(),
+		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+		"X-CM-ID": settings.x_cm_id,
+		"Authorization": authorization,
+	}
+
+	try:
+		response = request_and_post(
+			url, payload, headers, config.get("method"), "Process On-discover Request"
+		)
+		# send_sms(patient, mobile_no)
+		return response
+	except Exception as e:
+		frappe.log_error(message=e, title="Failed to Process On-discover Request")
+
+
+def get_patient_details(abha_address=None):
+	if not abha_address:
+		return
+
+	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
+
+	if not patient:
+		return
+
+	details = []
+	"""HItypes: Prescription,DiagnosticReport,OPConsultation,DischargeSummary,ImmunizationRecord,HealthDocumentRecord,WellnessRecord,Invoice"""
+
+	doctype_map = {
+		"Patient Encounter": "OPConsultation",
+		"Medication Request": "Prescription",
+		"Therapy Session": "WellnessRecord",
+		"Diagnostic Report": "DiagnosticReport",
+		"Discharge Summary": "DischargeSummary",
+		"Patient Medical Record": "HealthDocumentRecord",
+		"Sales Invoice": "Invoice",
+	}
+
+	for i in doctype_map:
+		records = frappe.db.get_all(
+			i, filters={"patient": patient, "docstatus": ["!=", 2]}, fields=["*"]
+		)
+		# records = frappe.db.get_all("FHIR Resource", filters={"patient": patient, "doctype": i}, fields=["*"])
+
+		carecontexts = []
+		for rec in records:
+			carecontexts.append(
+				{
+					"referenceNumber": rec.name,
+					"display": f"{rec.name}/{i}/{rec.patient_name}",
+				}
+			)
+
+		if len(carecontexts):
+			details.append(
+				{
+					"referenceNumber": patient,
+					"display": f"Record of {doctype_map[i]}",
+					"careContexts": carecontexts,
+					"hiType": doctype_map[i],
+					"count": len(carecontexts),
+				}
+			)
+
+	return details
 
 
 def request_and_post(url=None, payload=None, headers=None, method="POST", request_name=None):
@@ -631,9 +779,10 @@ def request_and_post(url=None, payload=None, headers=None, method="POST", reques
 		return response.json() if response.json() else response.text
 
 
-def get_abdm_settings():
+def get_abdm_settings(company=None):
 	settings = frappe.db.exists(
-		"ABDM Settings", {"company": frappe.defaults.get_user_default("Company"), "default": 1}
+		"ABDM Settings",
+		{"company": company or frappe.defaults.get_user_default("Company"), "default": 1},
 	)
 
 	if not settings:
@@ -693,7 +842,7 @@ def get_x_link_token(patient=None):
 		filters={
 			"patient": patient,
 			"token": ["is", "set"],
-			"url": "/api/v3/hip/token/on-generate-token",
+			"request_name": "Callback of HIP Link Token",
 			"status": "Granted",
 			"request_date": [">=", min_token_date],
 		},
@@ -727,5 +876,57 @@ def post_abdm_request(**args):
 			req.traceback = message
 		if args.get("token"):
 			req.token = args.get("token")
+		if args.get("transaction_id"):
+			req.transaction_id = args.get("transaction_id")
+		if args.get("request_id"):
+			req.request_id = args.get("request_id")
 		req.response = json.dumps(args.data, indent=4)
 		req.insert(ignore_permissions=True)
+
+
+def send_sms(patient, mobile_no):
+	if not patient:
+		return
+
+	settings = get_abdm_settings()
+
+	if not settings.consent_base_url:
+		frappe.throw(
+			title="Not Configured",
+			msg="Consent Management Base URL not configured in ABDM Settings!",
+		)
+
+	token = get_token_for_hiecm()
+	config = get_url("sms_notify")
+
+	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
+		"accessToken"
+	)
+	url = settings.consent_base_url + config.get("url")
+	payload = {
+		"requestId": generate_unique_id(),
+		"timestamp": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+		"notification": {
+			"phoneNo": mobile_no,
+			"hip": {
+				"name": "ess-hip",
+				"id": "ess-hip"
+			}
+		}
+	}
+
+	headers = {
+		"Content-Type": "application/json",
+		"REQUEST-ID": generate_unique_id(),
+		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+		"X-CM-ID": settings.x_cm_id,
+		"Authorization": authorization,
+	}
+
+	try:
+		response = request_and_post(
+			url, payload, headers, config.get("method"), "Process On-Notify Request"
+		)
+		return response
+	except Exception as e:
+		frappe.log_error(message=e, title="Failed to Process On-Notify Request")

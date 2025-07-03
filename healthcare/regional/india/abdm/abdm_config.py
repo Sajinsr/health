@@ -104,6 +104,26 @@ config = {
 		"url": "hip/v3/link/context/notify",
 		"encrypted": False,
 	},
+	"on_discover": {
+		"method": "POST",
+		"url": "/user-initiated-linking/v3/patient/care-context/on-discover",
+		"encrypted": False,
+	},
+	"on_init": {
+		"method": "POST",
+		"url": "/user-initiated-linking/v3/link/care-context/on-init",
+		"encrypted": False,
+	},
+	"on_confirm": {
+		"method": "POST",
+		"url": "/user-initiated-linking/v3/link/care-context/on-confirm",
+		"encrypted": False,
+	},
+	"sms_notify": {
+		"method": "POST",
+		"url": "/hip/v3/link/patient/links/sms/notify2",
+		"encrypted": False,
+	},
 }
 
 

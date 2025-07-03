@@ -320,3 +320,5 @@ company_data_to_be_ignored = [
 ]
 
 page_renderer = ["healthcare.regional.india.abdm.handler.AbdmHandler"]
+
+before_request = ["healthcare.regional.india.abdm.auth.skip_auth_for_abdm_callbacks"]
