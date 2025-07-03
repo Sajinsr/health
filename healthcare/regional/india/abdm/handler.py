@@ -1,7 +1,3 @@
-# import importlib
-
-import json
-
 import frappe
 from frappe.website.page_renderers.base_renderer import BaseRenderer
 from frappe.website.utils import build_response
@@ -17,40 +13,50 @@ class AbdmHandler(BaseRenderer):
 		return False
 
 	def render(self):
+		import json
+
+		headers = dict(frappe.local.request.headers)
+		payload = frappe.request.data
+
+		frappe.log_error(
+			message=f"HEADERS: {json.dumps(headers, indent=2)}",
+			title="ABDM Callback Headers",
+		)
+		frappe.log_error(
+			message=f"PAYLOAD: {json.dumps(json.loads(payload), indent=2) if payload else None}",
+			title="ABDM Callback payload",
+		)
 		try:
-			method = frappe.request.method
 			prefix = "abdm/callback"
 			callback_path = self.path.removeprefix(prefix)
 			frappe.log_error(
 				message=f"Callback Request intiated on path: {callback_path}.",
 				title="ABDM Callback Request Initiated",
 			)
-			if method == "POST" and callback_path:
-				try:
-					dotted_path = callback_path.replace("-", "_").replace("/", ".")
-					abdm_path = f"healthcare.regional.india.abdm{dotted_path}".replace("..", ".")
-					method = frappe.get_attr(abdm_path)
-					response_data = method()
-					status_code = response_data.get("status_code") or 200
-				except json.JSONDecodeError:
-					response_data = {"status": "error", "message": "Invalid JSON format in request body."}
-					status_code = 400
-				except Exception as e:
-					response_data = {
-						"status": "error",
-						"message": f"Error processing ABHA Request: {str(e)}",
-					}
-					status_code = 500
+			if callback_path:
+				if frappe.request.method == "POST":
+					try:
+						dotted_path = callback_path.replace("-", "_").replace("/", ".")
+						abdm_path = f"healthcare.regional.india.abdm{dotted_path}".replace("..", ".")
+						method = frappe.get_attr(abdm_path)
+						response_data = method()
+						status_code = response_data.get("status_code") or 200
+					except Exception as e:
+						response_data = {
+							"status": "error",
+							"message": f"Error processing ABHA Request: {str(e)}",
+						}
+						status_code = 500
+				else:
+					response_data = {}
+					status_code = 200
+				frappe.log_error(
+					message=f"Response Data: {response_data}, Status Code: {status_code}",
+					title="ABDM Callback Request Processed",
+				)
 			else:
-				response_data = {
-					"status": "error",
-					"message": f"Method {method} not allowed for {self.path}. Use POST.",
-				}
-				status_code = 405
-			frappe.log_error(
-				message=f"Response Data: {response_data}, Status Code: {status_code}",
-				title="ABDM Callback Request Processed",
-			)
+				response_data = {}
+				status_code = 200
 			return build_response(
 				self.path, response_data, status_code or self.http_status_code, self.headers
 			)
@@ -62,21 +68,3 @@ class AbdmHandler(BaseRenderer):
 				500,
 				self.headers,
 			)
-
-
-# @frappe.whitelist(allow_guest=True)
-# def handle_abdm_apis():
-# 	request = frappe.request
-# 	if request.path.startswith(
-# 		"/api/method/healthcare.regional.india.abdm.handler.handle_abdm_apis/callback"
-# 	):
-# 		prefix = "/api/method/healthcare.regional.india.abdm.handler.handle_abdm_apis/callback"
-
-# 		callback_path = request.path.removeprefix(prefix)
-# 		if callback_path:
-# 			dotted_path = callback_path.replace("-", "_").replace("/", ".")
-
-# 			abdm_path = f"healthcare.regional.india.abdm{dotted_path}".replace("..", ".")
-# 			method = frappe.get_attr(abdm_path)
-
-# 			return method()

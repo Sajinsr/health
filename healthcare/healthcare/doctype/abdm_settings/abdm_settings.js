@@ -64,6 +64,7 @@ frappe.ui.form.on('ABDM Settings', {
 			frm.add_custom_button(__("Register Bridge Services"), function () {
 				frappe.call({
 					method: 'healthcare.regional.india.abdm.utils.register_bridge_service',
+					args:{ company: frm.doc.company},
 					callback: function (data) {}
 				});
 			});
