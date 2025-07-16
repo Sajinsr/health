@@ -35,14 +35,27 @@ class FHIRResourceMap(Document):
 
 	@frappe.whitelist()
 	def save_mapped_elements(self, elements):
-
 		self.set("map", [])
 		for el in elements:
+			fhir_path = el.get("fhir_path")
+			datatype = el.get("datatype")
+
+			# handle [x]
+			if el.get("is_choice_type") and datatype and "," not in datatype and "[x]" in fhir_path:
+				replacement = datatype[0].upper() + datatype[1:]
+				fhir_path = fhir_path.replace("[x]", replacement)
+
+			# set fhir datatype link
+			fhir_datatype = None
+			if datatype and frappe.db.exists("FHIR Datatype", datatype):
+				fhir_datatype = datatype
+
 			self.append(
 				"map",
 				{
-					"fhir_path": el.get("fhir_path"),
-					"fhir_datatype": el.get("fhir_datatype"),
+					"fhir_path": fhir_path,
+					"datatype": datatype,
+					"fhir_datatype": fhir_datatype,
 					"min": int(el.get("min") or 0),
 					"max": str(el.get("max") or "1"),
 					"short": el.get("short") or "",
@@ -53,9 +66,8 @@ class FHIRResourceMap(Document):
 					"default_value": el.get("default_value") or None,
 				},
 			)
-
-		self.save(ignore_permissions=True)
-		frappe.msgprint(_("FHIR field mappings saved."), alert=True)
+		self.save()
+		frappe.msgprint(_("FHIR element <> Frappe field mapping saved."), alert=True)
 
 	@frappe.whitelist()
 	def preview_fhir_resource(self, docname):

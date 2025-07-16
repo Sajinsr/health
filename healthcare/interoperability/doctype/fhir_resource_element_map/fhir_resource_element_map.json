@@ -9,7 +9,7 @@
  "field_order": [
   "map_section",
   "fhir_path",
-  "fhir_datatype",
+  "datatype",
   "min",
   "max",
   "short",
@@ -19,6 +19,8 @@
   "column_break_otcd",
   "frappe_field",
   "default_value",
+  "fhir_datatype",
+  "regex",
   "section_break_nxho",
   "transformer"
  ],
@@ -34,11 +36,10 @@
    "label": "Frappe Field"
   },
   {
-   "columns": 2,
    "fieldname": "fhir_datatype",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "FHIR Datatype"
+   "fieldtype": "Link",
+   "label": "FHIR Datatype",
+   "options": "FHIR Datatype"
   },
   {
    "fieldname": "section_break_nxho",
@@ -109,13 +110,26 @@
    "fieldtype": "Check",
    "label": "Is Choice Type",
    "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "datatype",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Datatype"
+  },
+  {
+   "fetch_from": "fhir_datatype.regex",
+   "fieldname": "regex",
+   "fieldtype": "Data",
+   "label": "Regex"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-16 17:14:37.957320",
+ "modified": "2025-07-15 14:39:07.621331",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Element Map",
