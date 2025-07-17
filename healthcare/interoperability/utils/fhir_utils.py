@@ -130,11 +130,10 @@ def import_structure_definitions_from_package(package_tarball, version_name, pro
 					row.type = ",".join(normalized_types)
 					row.is_choice_type = 1  # requires 'is_choice_type' field in child table
 
-				# Set typed paths for is_choice_type cases (for completeness, useful downstream)
-				if row.is_choice_type and "[x]" in row.path:
-					row.typed_paths = json.dumps(
-						[row.path.replace("[x]", t.capitalize()) for t in normalized_types]
-					)
+				binding = e.get("binding")
+				if binding:
+					row.value_set_url = binding.get("valueSet")
+					row.binding_strength = binding.get("strength")
 
 			try:
 				sd.save(ignore_permissions=True)
