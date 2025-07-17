@@ -203,7 +203,6 @@ function show_map_dialog(frm) {
 					const is_id = el.path === `${sd.fhir_sd}.id`;
 					const is_dt = el.path === sd.fhir_sd;
 					const is_editable = el.is_choice_type;
-					// const map = frm.doc.map.find(({ fhir_path }) => fhir_path === el.path);
 					const map = frm.doc.map.find(({ fhir_path }) =>
 						fhir_path === el.path ||
 						(el.path.includes("[x]") && fhir_path.startsWith(el.path.replace("[x]", "")))

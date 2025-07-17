@@ -21,7 +21,7 @@ frappe.ui.form.on("FHIR Version", {
 	},
 
 	schema_file: function (frm) {
-		if (!frm.doc.package_file.endsWith(".tar.gz") && !frm.doc.package_file.endsWith(".tgz")) {
+		if (!frm.doc.package_file.endsWith(".tar.gz") || !frm.doc.package_file.endsWith(".tgz")) {
 			frappe.msgprint(__("Please upload a valid FHIR Package (.tgz / tar.gz) file."));
 		}
 	}
