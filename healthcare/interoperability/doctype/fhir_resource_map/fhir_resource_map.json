@@ -22,6 +22,7 @@
   "section_break_losh",
   "frappe_doctype",
   "column_break_nvkk",
+  "narrative_template",
   "section_break_aicb",
   "description",
   "section_break_nqfe",
@@ -95,10 +96,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Text Editor"
-  },
-  {
    "fieldname": "fhir_structure_def",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -112,6 +109,7 @@
    "options": "FHIR Resource Element Map"
   },
   {
+   "fetch_from": "fhir_structure_def.fhir_sd",
    "fieldname": "resource_type",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -126,9 +124,11 @@
    "label": "Description"
   },
   {
+   "fetch_from": "fhir_structure_def.sd_version",
    "fieldname": "sd_version",
    "fieldtype": "Data",
-   "label": "Structure Definition Version"
+   "label": "Structure Definition Version",
+   "read_only": 1
   },
   {
    "fieldname": "base",
@@ -136,35 +136,46 @@
    "label": "Base"
   },
   {
+   "fetch_from": "fhir_structure_def.status",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "\nDraft\nActive\nRetired\nUnknown"
+   "options": "\nDraft\nActive\nRetired\nUnknown",
+   "read_only": 1
   },
   {
+   "fetch_from": "fhir_structure_def.kind",
    "fieldname": "kind",
    "fieldtype": "Select",
    "label": "Kind",
-   "options": "\nResource\nDatatype\nComplex-type\nLogical\nPrimitive-type"
+   "options": "\nResource\nDatatype\nComplex-type\nLogical\nPrimitive-type",
+   "read_only": 1
   },
   {
+   "fetch_from": "fhir_structure_def.url",
    "fieldname": "url",
    "fieldtype": "Data",
-   "label": "URL"
+   "label": "URL",
+   "read_only": 1
   },
   {
+   "fetch_from": "fhir_structure_def.publisher",
    "fieldname": "publisher",
    "fieldtype": "Data",
-   "label": "Publisher"
+   "label": "Publisher",
+   "read_only": 1
   },
   {
+   "fetch_from": "fhir_structure_def.contact",
    "fieldname": "contact",
    "fieldtype": "Data",
-   "label": "Contact"
+   "label": "Contact",
+   "read_only": 1
   },
   {
    "fieldname": "tab_break_kivw",
-   "fieldtype": "Tab Break"
+   "fieldtype": "Tab Break",
+   "label": "Raw"
   },
   {
    "fieldname": "fhir_json_section",
@@ -176,12 +187,23 @@
    "fieldtype": "Code",
    "label": "Structure Definition",
    "read_only": 1
+  },
+  {
+   "fieldname": "narrative_template",
+   "fieldtype": "Link",
+   "label": "Narrative Template",
+   "options": "Terms and Conditions"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-16 18:16:28.242490",
+ "modified": "2025-07-18 16:55:51.113786",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",

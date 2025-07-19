@@ -8,15 +8,19 @@
  "engine": "InnoDB",
  "field_order": [
   "path",
-  "short",
   "datatype",
   "is_choice_type",
   "min",
   "max",
   "is_required",
   "column_break_zvmg",
-  "value_set_url",
+  "valueset_url",
   "binding_strength",
+  "short",
+  "fixed_value",
+  "pattern_value",
+  "default_value",
+  "section_break_irwq",
   "definition"
  ],
  "fields": [
@@ -69,7 +73,7 @@
   },
   {
    "fieldname": "short",
-   "fieldtype": "Data",
+   "fieldtype": "Text",
    "label": "Short",
    "read_only": 1
   },
@@ -82,15 +86,9 @@
   },
   {
    "fieldname": "datatype",
-   "fieldtype": "Data",
+   "fieldtype": "Code",
    "in_list_view": 1,
    "label": "Datatype",
-   "read_only": 1
-  },
-  {
-   "fieldname": "value_set_url",
-   "fieldtype": "Data",
-   "label": "Value Set URL",
    "read_only": 1
   },
   {
@@ -98,13 +96,41 @@
    "fieldtype": "Data",
    "label": "Binding Strength",
    "read_only": 1
+  },
+  {
+   "fieldname": "valueset_url",
+   "fieldtype": "Data",
+   "label": "Value Set URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fixed_value",
+   "fieldtype": "Code",
+   "label": "Fixed Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pattern_value",
+   "fieldtype": "Code",
+   "label": "Pattern Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_value",
+   "fieldtype": "Code",
+   "label": "Default Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_irwq",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-17 19:21:57.403434",
+ "modified": "2025-07-18 20:57:18.457754",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Structure Definition Element",

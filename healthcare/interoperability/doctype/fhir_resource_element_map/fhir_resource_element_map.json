@@ -13,16 +13,19 @@
   "min",
   "max",
   "short",
-  "definition",
   "is_required",
   "is_choice_type",
   "column_break_otcd",
   "frappe_field",
-  "default_value",
   "fhir_datatype",
   "regex",
+  "valueset_url",
+  "binding_strength",
+  "fixed_value",
+  "pattern_value",
+  "default_value",
   "section_break_nxho",
-  "transformer"
+  "definition"
  ],
  "fields": [
   {
@@ -37,7 +40,7 @@
   },
   {
    "fieldname": "fhir_datatype",
-   "fieldtype": "Link",
+   "fieldtype": "Code",
    "label": "FHIR Datatype",
    "options": "FHIR Datatype"
   },
@@ -48,15 +51,10 @@
   },
   {
    "fieldname": "default_value",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Default Value "
-  },
-  {
-   "fieldname": "transformer",
    "fieldtype": "Code",
-   "label": "Transformer",
-   "options": "Python"
+   "in_list_view": 1,
+   "label": "Default Value ",
+   "read_only": 1
   },
   {
    "columns": 3,
@@ -85,13 +83,13 @@
   },
   {
    "fieldname": "short",
-   "fieldtype": "Data",
+   "fieldtype": "Text",
    "label": "Short",
    "read_only": 1
   },
   {
    "fieldname": "definition",
-   "fieldtype": "Small Text",
+   "fieldtype": "Long Text",
    "label": "Definition",
    "read_only": 1
   },
@@ -123,13 +121,37 @@
    "fieldname": "regex",
    "fieldtype": "Data",
    "label": "Regex"
+  },
+  {
+   "fieldname": "valueset_url",
+   "fieldtype": "Data",
+   "label": "Value Set URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "binding_strength",
+   "fieldtype": "Data",
+   "label": "Binding Strength",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fixed_value",
+   "fieldtype": "Code",
+   "label": "Fixed Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pattern_value",
+   "fieldtype": "Code",
+   "label": "Pattern Value",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-15 14:39:07.621331",
+ "modified": "2025-07-18 20:56:57.082502",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Element Map",
