@@ -116,60 +116,6 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
-
-		frm.add_custom_button(__("Preview Resource 2"), () => {
-			const frappe_doctype = frm.doc.frappe_doctype;
-
-			if (!frappe_doctype) {
-				frappe.throw(__("Please map a doctype and fields to generate preview"));
-			}
-
-			const dialog = new frappe.ui.Dialog({
-				title: __("FHIR Resource Preview"),
-				fields: [
-					{
-						label: __(`Select a ${frappe_doctype} Document`),
-						fieldname: "docname",
-						fieldtype: "Link",
-						options: frappe_doctype,
-						reqd: true
-					}
-				],
-				primary_action_label: "Preview",
-				primary_action(values) {
-					const docname = values.docname;
-					console.log(docname);
-					frappe.call({
-						method: "preview_fhir_resource",
-						doc: frm.doc,
-						args: { docname: docname },
-						callback(res) {
-							const json = JSON.stringify(res.message[0], null, 2);
-							dialog.hide();
-
-							const preview_dialog = new frappe.ui.Dialog({
-								title: __("FHIR Resource JSON Preview"),
-								fields: [
-									{
-										fieldname: 'json_preview',
-										fieldtype: 'Code',
-										label: 'FHIR JSON',
-										options: 'JSON',
-										read_only: 1,
-										default: json
-									}
-								],
-								size: 'large'
-							});
-							preview_dialog.show();
-							preview_dialog.refresh();
-						}
-					});
-				}
-			});
-			dialog.show();
-		});
-
 	}
 });
 
@@ -220,7 +166,9 @@ function show_map_dialog(frm) {
 					primary_action_label: __("Save Mapping"),
 					primary_action: () => {
 						const element_maps = Object.values(path_to_mapping);
-						const missing_required = element_maps.filter(el => el.is_required && !el.frappe_field && !el.default_value);
+						const missing_required = element_maps.filter(
+							el => el.is_required && !COMPLEX_FHIR_DATATYPES.includes(el.datatype) && !el.frappe_field && !el.default_value
+						);
 						if (missing_required.length) {
 							frappe.msgprint(__("Not all mandatory FHIR fields are mapped. Missing: ") + missing_required.map(e => e.fhir_path).join(", "));
 							return;
@@ -243,12 +191,7 @@ function show_map_dialog(frm) {
 				html += `<tbody>`
 
 				elements.forEach(el => {
-				    if (
-						el.path === sd.fhir_sd || // root Patient
-						COMPLEX_FHIR_DATATYPES.includes(el.datatype) // object roots
-					) {
-						return;
-					}
+				    if (el.path === sd.fhir_sd) return;
 
 					const is_id = el.path === `${sd.fhir_sd}.id`;
 					const is_dt = el.path === sd.fhir_sd;
@@ -262,6 +205,7 @@ function show_map_dialog(frm) {
 					const dt_val = is_dt ? frm.doc.frappe_doctype : (map ? (map.default_value || "") : "");
 					const type_val = (map && map.datatype) || el.datatype || "";
 					const path_val = (map && map.fhir_path) || el.path || "";
+					const is_container = COMPLEX_FHIR_DATATYPES.includes(el.datatype)
 
 					path_to_mapping[el.path] = {
 						fhir_path: el.path,
@@ -278,17 +222,18 @@ function show_map_dialog(frm) {
 						fixed_value: el.fixed_value,
 						pattern_value: el.pattern_value,
 						default_value: dt_val || el.default_value,
+						target_profiles: el.target_profiles,
 					};
 
 					html += `<tr data-path="${el.path}">
 						<td><input class='form-control path' value="${path_val}" ${!is_editable ? "readonly" : ""}></td>
 						<td><input class='form-control type' value="${type_val}" ${!is_editable ? "readonly" : ""}></td>
 						<td><input class='form-control' value="${el.min || 0}" readonly></td>
-						<td><select class='form-control frappe-field' ${is_dt || is_id ? "disabled" : ""}>
+						<td><select class='form-control frappe-field' ${is_dt || is_id || is_container ? "disabled" : ""}>
 							<option value="">${__("-- Select --")}</option>
 							${doc_fields.map(f => `<option value="${f.value}" ${f.value === id_val ? "selected" : ""}>${f.label}</option>`).join("")}
 						</select></td>
-						<td><input class='form-control default-value' value="${dt_val}" ${is_dt || is_id ? "readonly" : ""}></td>
+						<td><input class='form-control default-value' value="${dt_val}" ${is_dt || is_id || is_container ? "readonly" : ""}></td>
 						</tr>`;
 				});
 

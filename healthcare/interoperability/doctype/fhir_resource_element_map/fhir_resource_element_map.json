@@ -24,6 +24,7 @@
   "fixed_value",
   "pattern_value",
   "default_value",
+  "target_profiles",
   "section_break_nxho",
   "definition"
  ],
@@ -145,13 +146,19 @@
    "fieldtype": "Code",
    "label": "Pattern Value",
    "read_only": 1
+  },
+  {
+   "fieldname": "target_profiles",
+   "fieldtype": "Code",
+   "label": "Target Profiles",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-18 20:56:57.082502",
+ "modified": "2025-07-19 10:37:14.686379",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Element Map",
