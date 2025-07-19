@@ -70,7 +70,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "URL",
-   "read_only": 1,
    "search_index": 1
   },
   {
@@ -113,7 +112,7 @@
    "link_fieldname": "fhir_version"
   }
  ],
- "modified": "2025-06-16 17:14:39.114387",
+ "modified": "2025-07-19 13:24:29.496314",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Version",
