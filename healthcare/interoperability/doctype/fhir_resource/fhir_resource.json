@@ -15,9 +15,11 @@
   "fhir_resource_type",
   "frappe_doctype",
   "frappe_document",
+  "resource_json_tab",
   "section_break_yyne",
   "fhir_resource",
   "column_break_bcvm",
+  "resource_html_tab",
   "resource_html"
  ],
  "fields": [
@@ -117,13 +119,23 @@
   {
    "fieldname": "column_break_bcvm",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resource_json_tab",
+   "fieldtype": "Tab Break",
+   "label": "Resource JSON"
+  },
+  {
+   "fieldname": "resource_html_tab",
+   "fieldtype": "Tab Break",
+   "label": "Resource HTML"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-16 17:14:37.776483",
+ "modified": "2025-07-19 13:51:46.977030",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource",

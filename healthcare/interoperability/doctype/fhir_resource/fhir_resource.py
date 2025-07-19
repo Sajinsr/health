@@ -8,8 +8,6 @@ import requests
 import frappe
 from frappe.model.document import Document
 
-from healthcare.interoperability.utils.fhir_renderer import render_patient_html
-
 
 class FHIRResource(Document):
 	@frappe.whitelist()
@@ -38,12 +36,3 @@ class FHIRResource(Document):
 		except Exception as e:
 			frappe.log_error(frappe.get_traceback(), "FHIR Remote Validation Error")
 			return {"error": str(e)}
-
-	@frappe.whitelist()
-	def get_rendered_html(self):
-
-		if not self.fhir_resource:
-			return "<div class='text-muted'>No resource JSON found</div>"
-
-		resource = json.loads(self.fhir_resource)
-		return render_patient_html(resource)
