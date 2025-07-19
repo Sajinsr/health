@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from healthcare.interoperability.utils.fhir_engine import generate_fhir_resource
+from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
 
 
 class FHIRResourceMap(Document):
@@ -22,6 +22,7 @@ class FHIRResourceMap(Document):
 
 	def validate(self):
 		self.resource_type = self.fhir_structure_def.split("-", 1)[0]
+
 		missing = [
 			fm.fhir_path for fm in self.map if fm.min > 0 and not fm.frappe_field and not fm.default_value
 		]
@@ -62,20 +63,23 @@ class FHIRResourceMap(Document):
 					"definition": el.get("definition") or "",
 					"is_required": bool(el.get("is_required")),
 					"is_choice_type": bool(el.get("is_choice_type")),
-					"frappe_field": el.get("frappe_field") or None,
-					"default_value": el.get("default_value") or None,
+					"frappe_field": el.get("frappe_field"),
+					"valueset_url": el.get("valueset_url"),
+					"binding_strength": el.get("binding_strength"),
+					"fixed_value": el.get("fixed_value"),
+					"pattern_value": el.get("pattern_value"),
+					"default_value": el.get("default_value"),
 				},
 			)
 		self.save()
 		frappe.msgprint(_("FHIR element <> Frappe field mapping saved."), alert=True)
 
 	@frappe.whitelist()
-	def preview_fhir_resource(self, docname):
-
-		if not self.frappe_doctype:
-			frappe.throw(_("Frappe Doctype is not specified in this FHIR Resource Map."))
-
-		doc = frappe.get_doc(self.frappe_doctype, docname)
-
-		resource = generate_fhir_resource(doc)
-		return resource
+	def preview_fhir_resource(self, docname, show_errors=False):
+		frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
+		transformer = FHIRResourceTransformer(
+			frappe_doc=frappe_doc,
+			fhir_version=self.fhir_version,
+			raise_on_invalid=False,
+		)
+		resource = transformer.transform()

@@ -125,19 +125,37 @@ def import_structure_definitions_from_package(package_tarball, version_name, pro
 					normalized_types.append(code)
 
 				if len(normalized_types) == 1:
-					row.type = normalized_types[0]
+					row.datatype = normalized_types[0]
 				elif normalized_types:
-					row.type = ",".join(normalized_types)
-					row.is_choice_type = 1  # requires 'is_choice_type' field in child table
+					row.datatype = ",".join(normalized_types)
+					row.is_choice_type = 1
 
 				binding = e.get("binding")
 				if binding:
-					row.value_set_url = binding.get("valueSet")
+					row.valueset_url = binding.get("valueSet")
 					row.binding_strength = binding.get("strength")
+
+				element_prefix_map = {
+					"fixed": "fixed_value",
+					"pattern": "pattern_value",
+					"defaultValue": "default_value",
+				}
+
+				for key, value in e.items():
+					if value is not None and key.startswith(tuple(element_prefix_map.keys())):
+						val = json.dumps(value) if isinstance(value, (dict, list)) else str(value)
+						for prefix, fieldname in element_prefix_map.items():
+							if key.startswith(prefix):
+								setattr(row, fieldname, val)
+								break
 
 			try:
 				sd.save(ignore_permissions=True)
-			except Exception:
+			except Exception as e:
+				frappe.log_error(
+					message=f"Failed to save\n'{sd}'\n\nTraceback:\n{e}",
+					title="Error saving Structure Definition",
+				)
 				continue
 
 

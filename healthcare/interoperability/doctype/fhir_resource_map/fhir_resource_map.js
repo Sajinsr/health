@@ -1,6 +1,42 @@
 // Copyright (c) 2025, earthians Health Informatics Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
+const COMPLEX_FHIR_DATATYPES = [
+    "HumanName",
+    "Address",
+    "ContactPoint",
+    "Reference",
+    "Period",
+    "Identifier",
+    "CodeableConcept",
+    "Coding",
+    "Attachment",
+    "Signature",
+    "Quantity",
+    "Money",
+    "Ratio",
+    "SampledData",
+    "Age",
+    "Distance",
+    "Count",
+    "Range",
+    "Duration",
+    "Timing",
+    "Annotation",
+    "Narrative",
+    "Extension",
+    "BackboneElement",
+    "ElementDefinition",
+    "Meta",
+    "Dosage",
+    "RelatedArtifact",
+    "UsageContext",
+    "DataRequirement",
+    "ParameterDefinition",
+    "Expression",
+    "TriggerDefinition",
+]
+
 frappe.ui.form.on("FHIR Resource Map", {
 	onload_post_render: (frm) => {
 		frm.set_query("fhir_profile", () => ({
@@ -138,6 +174,10 @@ frappe.ui.form.on("FHIR Resource Map", {
 });
 
 function show_map_dialog(frm) {
+
+	if (!frm.doc.frappe_doctype) {
+		frappe.throw("Please select a DocType and Structure Definition to start mapping");
+	}
 	frappe.model.with_doctype(frm.doc.frappe_doctype, () => {
 		let doc_fields = [];
 		doc_fields.push({ value: "name", label: "ID" });
@@ -165,6 +205,9 @@ function show_map_dialog(frm) {
 			}
 		});
 
+		if (!frm.doc.fhir_structure_def) {
+			frappe.throw("Please select a Structure Definition and Doctype to start mapping");
+		}
 		frappe.db.get_doc("FHIR Structure Definition", frm.doc.fhir_structure_def)
 			.then(sd => {
 				let elements = sd.element_paths;
@@ -200,22 +243,29 @@ function show_map_dialog(frm) {
 				html += `<tbody>`
 
 				elements.forEach(el => {
+				    if (
+						el.path === sd.fhir_sd || // root Patient
+						COMPLEX_FHIR_DATATYPES.includes(el.datatype) // object roots
+					) {
+						return;
+					}
+
 					const is_id = el.path === `${sd.fhir_sd}.id`;
 					const is_dt = el.path === sd.fhir_sd;
 					const is_editable = el.is_choice_type;
+
 					const map = frm.doc.map.find(({ fhir_path }) =>
 						fhir_path === el.path ||
 						(el.path.includes("[x]") && fhir_path.startsWith(el.path.replace("[x]", "")))
 					);
-					const id_val = is_id ? "ID" : (map ? map.frappe_field : "");
-					const dt_val = is_dt ? frm.doc.frappe_doctype : (map ? map.default_value : "");
-					const type_val = map ? map.datatype : el.type;
-					const path_val = map ? map.fhir_path : el.path;
+					const id_val = is_id ? "name" : (map ? map.frappe_field : "");
+					const dt_val = is_dt ? frm.doc.frappe_doctype : (map ? (map.default_value || "") : "");
+					const type_val = (map && map.datatype) || el.datatype || "";
+					const path_val = (map && map.fhir_path) || el.path || "";
 
 					path_to_mapping[el.path] = {
 						fhir_path: el.path,
 						frappe_field: id_val || null,
-						default_value: dt_val || null,
 						datatype: type_val || el.type,
 						min: el.min,
 						max: el.max,
@@ -223,6 +273,11 @@ function show_map_dialog(frm) {
 						definition: el.definition,
 						is_required: el.is_required,
 						is_choice_type: el.is_choice_type,
+						valueset_url: el.valueset_url,
+						binding_strength: el.binding_strength,
+						fixed_value: el.fixed_value,
+						pattern_value: el.pattern_value,
+						default_value: dt_val || el.default_value,
 					};
 
 					html += `<tr data-path="${el.path}">
@@ -233,7 +288,7 @@ function show_map_dialog(frm) {
 							<option value="">${__("-- Select --")}</option>
 							${doc_fields.map(f => `<option value="${f.value}" ${f.value === id_val ? "selected" : ""}>${f.label}</option>`).join("")}
 						</select></td>
-						<td><input class='form-control default-value' value="${dt_val}" ${is_dt ? "readonly" : ""}></td>
+						<td><input class='form-control default-value' value="${dt_val}" ${is_dt || is_id ? "readonly" : ""}></td>
 						</tr>`;
 				});
 
