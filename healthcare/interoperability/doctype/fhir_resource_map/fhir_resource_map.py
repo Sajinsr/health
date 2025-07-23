@@ -5,7 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
+# from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
+from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
 
 
 class FHIRResourceMap(Document):
@@ -23,16 +24,17 @@ class FHIRResourceMap(Document):
 	def validate(self):
 		self.resource_type = self.fhir_structure_def.split("-", 1)[0]
 
-		missing = [
-			fm.fhir_path for fm in self.map if fm.min > 0 and not fm.frappe_field and not fm.default_value
-		]
-		if missing:
-			frappe.throw(
-				_(
-					"You must map or supply a default value for these FHIR elements which are required as per Resource Structure Definition:\n  "
-				)
-				+ "\n  ".join(missing)
-			)
+		# also need to consider COMPLEX_FHIR_DATATYPES (validation present in cscript for now)
+		# missing = [
+		# 	fm.fhir_path for fm in self.map if fm.min > 0 and not fm.frappe_field and not fm.default_value
+		# ]
+		# if missing:
+		# 	frappe.throw(
+		# 		_(
+		# 			"You must map or supply a default value for these FHIR elements which are required as per Resource Structure Definition:\n  "
+		# 		)
+		# 		+ "\n  ".join(missing)
+		# 	)
 
 	@frappe.whitelist()
 	def save_mapped_elements(self, elements):
@@ -69,6 +71,7 @@ class FHIRResourceMap(Document):
 					"fixed_value": el.get("fixed_value"),
 					"pattern_value": el.get("pattern_value"),
 					"default_value": el.get("default_value"),
+					"target_profiles": el.get("target_profiles"),
 				},
 			)
 		self.save()
@@ -77,9 +80,7 @@ class FHIRResourceMap(Document):
 	@frappe.whitelist()
 	def preview_fhir_resource(self, docname, show_errors=False):
 		frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
-		transformer = FHIRResourceTransformer(
-			frappe_doc=frappe_doc,
-			fhir_version=self.fhir_version,
-			raise_on_invalid=False,
-		)
-		resource = transformer.transform()
+
+		generator = FHIRResourceGenerator(self, frappe_doc)
+		resource_json = generator.generate()
+		return resource_json

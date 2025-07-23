@@ -9,6 +9,7 @@
  "field_order": [
   "element_name",
   "fhir_datatype",
+  "regex",
   "column_break_qkae",
   "min",
   "max",
@@ -40,13 +41,15 @@
    "fieldname": "min",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Min"
+   "label": "Min",
+   "search_index": 1
   },
   {
    "fieldname": "max",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Max"
+   "label": "Max",
+   "search_index": 1
   },
   {
    "default": "0",
@@ -55,13 +58,18 @@
    "in_list_view": 1,
    "label": "Is Required ",
    "read_only": 1
+  },
+  {
+   "fieldname": "regex",
+   "fieldtype": "Data",
+   "label": "Regex"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-16 17:14:37.235413",
+ "modified": "2025-07-23 16:13:35.904657",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Datatype Element",
