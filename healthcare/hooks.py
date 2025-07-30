@@ -64,9 +64,7 @@ doctype_js = {"Sales Invoice": "public/js/sales_invoice.js"}
 # automatically create page for each record of this doctype
 # website_generators = ["Web Page"]
 
-page_renderer = [
-    "healthcare.healthcare.api.dicom.handler.DICOMWebRenderer"
-]
+page_renderer = ["healthcare.healthcare.api.dicom.dcmweb_renderer.DICOMWebRenderer"]
 
 
 # Jinja
