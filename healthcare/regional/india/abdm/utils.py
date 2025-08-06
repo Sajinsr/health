@@ -11,55 +11,6 @@ from healthcare.regional.india.abdm.abdm_config import get_url
 
 
 @frappe.whitelist()
-def get_authorization_token():
-	client_id, client_secret, auth_base_url = frappe.db.get_value(
-		"ABDM Settings",
-		{"company": frappe.defaults.get_user_default("Company"), "default": 1},
-		["client_id", "client_secret", "auth_base_url"],
-	)
-
-	config = get_url("authorization")
-	auth_base_url = auth_base_url.rstrip("/")
-	url = auth_base_url + config.get("url")
-	payload = {"clientId": client_id, "clientSecret": client_secret}
-	if not auth_base_url:
-		frappe.throw(
-			title="Not Configured",
-			msg="Base URL not configured in ABDM Settings!",
-		)
-
-	req = frappe.new_doc("ABDM Request")
-	req.request = json.dumps(payload, indent=4)
-	req.url = url
-	req.request_name = "Authorization Token"
-	try:
-		response = requests.request(
-			method=config.get("method"),
-			url=url,
-			headers={"Content-Type": "application/json; charset=UTF-8"},
-			data=json.dumps(payload),
-		)
-		response.raise_for_status()
-		response = response.json()
-		req.response = json.dumps(response, indent=4)
-		req.status = "Granted"
-		req.insert(ignore_permissions=True)
-		return response.get("accessToken"), response.get("tokenType")
-
-	except Exception as e:
-		try:
-			req.response = json.dumps(response.json(), indent=4)
-		except json.decoder.JSONDecodeError:
-			req.response = response.text
-		req.traceback = e
-		req.status = "Revoked"
-		req.insert(ignore_permissions=True)
-		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
-		frappe.log_error(message=traceback, title="Cant create session")
-		return auth_base_url, None
-
-
-@frappe.whitelist()
 def abdm_request(
 	payload=None,
 	url_key=None,
@@ -85,142 +36,112 @@ def abdm_request(
 		frappe.throw(title="Not Configured", msg="Base URL not configured in ABDM Settings!")
 
 	config = get_url(url_key)
-	base_url = base_url.rstrip("/")
+	base_url = base_url
 	url = base_url + config.get("url")
 	# Check the abdm_config, if the data need to be encypted, encrypts message
 	# Build payload with encrypted message
 	if config.get("encrypted"):
-		message = payload.get("to_encrypt")
+		if url_key in ["verify_abha_number_otp", "verify_abha_address_otp", "create_abha_w_aadhaar"]:
+			message = payload["authData"]["otp"][to_be_enc]
+		else:
+			message = payload.get(to_be_enc)
 		encrypted = get_encrypted_message(message)
-		if "encrypted_msg" in encrypted and encrypted["encrypted_msg"]:
-			payload[to_be_enc] = payload.pop("to_encrypt")
-			payload[to_be_enc] = encrypted["encrypted_msg"]
+		if encrypted and encrypted.get("encrypted_msg"):
+			if url_key in ["verify_abha_number_otp", "verify_abha_address_otp", "create_abha_w_aadhaar"]:
+				payload["authData"]["otp"][to_be_enc] = encrypted["encrypted_msg"]
+			else:
+				payload[to_be_enc] = encrypted["encrypted_msg"]
+	token = {}
+	if not access_token:
+		token = get_authorization_token()
+		access_token, token_type = token.get("accessToken"), token.get("tokenType")
 
 	if not access_token:
-		access_token, token_type = get_authorization_token()
-
-	if not access_token:
+		msg = "Access token generation failed, Please try again."
+		if token.get("traceback"):
+			msg += f"<br><br>Traceback: {token.get('traceback')}"
 		frappe.throw(
 			title="Authorization Failed",
-			msg="Access token generation for authorization failed, Please try again.",
+			msg=msg,
 		)
-
+	authorization = None
 	authorization = ("Bearer " if token_type == "bearer" else "") + access_token
 	headers = {
 		"Content-Type": "application/json",
 		"Accept": "application/json",
+		"REQUEST-ID": generate_unique_id(),
+		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
 		"Authorization": authorization,
 	}
+
+	if url_key in ["get_card", "get_account_card"]:
+		headers["Accept"] = "*/*"
 	if rec_headers:
 		if isinstance(rec_headers, str):
 			rec_headers = json.loads(rec_headers)
 		headers.update(rec_headers)
-	req = frappe.new_doc("ABDM Request")
-	req.status = "Requested"
-	# TODO: skip saving or encrypt the data saved
-	req.request = json.dumps(payload, indent=4)
-	req.url = url
-	req.request_name = url_key
+
 	try:
-		response = requests.request(
-			method=config.get("method"), url=url, headers=headers, data=json.dumps(payload)
-		)
-		response.raise_for_status()
-		if url_key == "get_card":
-			pdf = response.content
-			_file = frappe.get_doc(
-				{
-					"doctype": "File",
-					"file_name": "abha_card{}.png".format(patient_name),
-					"attached_to_doctype": "Patient",
-					"attached_to_name": patient_name,
-					"attached_to_field": "abha_card",
-					"is_private": 0,
-					"content": pdf,
-				}
-			)
-			_file.save()
-			frappe.db.commit()
-			return _file
-		if response.json() and isinstance(response.json(), dict):
-			req.response = json.dumps(response.json(), indent=4)
-		else:
-			req.response = response.text
-		req.status = "Granted"
-		req.insert(ignore_permissions=True)
-		return response.json()
+		return request_and_post(url, payload, headers, config.get("method"), url_key, patient_name)
 
 	except Exception as e:
-		req.traceback = e
-		if response.json() and isinstance(response.json(), dict):
-			req.response = json.dumps(response.json(), indent=4)
-		else:
-			req.response = response.text
-		req.status = "Revoked"
-		req.insert(ignore_permissions=True)
 		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
 		frappe.log_error(message=traceback, title="Cant complete API call")
-		return response.json()
+		return traceback
 
 
 def get_encrypted_message(message):
-	base_url = frappe.db.get_value(
-		"ABDM Settings",
-		{"company": frappe.defaults.get_user_default("Company"), "default": 1},
-		["health_id_base_url"],
-	)
+	settings = get_abdm_settings()
 
 	config = get_url("auth_cert")
-	url = base_url + config.get("url")
-	req = frappe.new_doc("ABDM Request")
-	req.status = "Requested"
-	req.url = url
-	req.request_name = "auth_cert"
-	try:
-		response = requests.request(
-			method=config.get("method"), url=url, headers={"Content-Type": "application/json"}
-		)
+	url = settings.health_id_base_url + config.get("url")
 
-		response.raise_for_status()
-		pub_key = response.text
-		pub_key = (
-			pub_key.replace("\n", "")
-			.replace("-----BEGIN PUBLIC KEY-----", "")
-			.replace("-----END PUBLIC KEY-----", "")
-		)
+	token = get_authorization_token()
+
+	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
+		"accessToken"
+	)
+	headers = {
+		"REQUEST-ID": generate_unique_id(),
+		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+		"Authorization": authorization,
+	}
+	try:
+		response = request_and_post(url, None, headers, config.get("method"), "Auth Cert API")
+
+		pub_key = response.get("publicKey") if isinstance(response, dict) else None
 		if pub_key:
 			encrypted_msg = get_rsa_encrypted_message(message, pub_key)
-			req.response = encrypted_msg
-			req.status = "Granted"
-		req.insert(ignore_permissions=True)
+
 		encrypted = {"public_key": pub_key, "encrypted_msg": encrypted_msg}
 		return encrypted
 
 	except Exception as e:
-		req.traceback = e
-		req.response = json.dumps(response.json(), indent=4)
-		req.status = "Revoked"
-		req.insert(ignore_permissions=True)
 		traceback = f"Remote URL {url}\nTraceback: {e}"
 		frappe.log_error(message=traceback, title="Cant complete API call")
-		return None
+		return
 
 
 def get_rsa_encrypted_message(message, pub_key):
-	# TODO:- Use cryptography
 	from base64 import b64decode, b64encode
 
-	from Crypto.Cipher import PKCS1_v1_5
-	from Crypto.PublicKey import RSA
+	from cryptography.hazmat.backends import default_backend
+	from cryptography.hazmat.primitives import hashes, serialization
+	from cryptography.hazmat.primitives.asymmetric import padding
 
-	message = bytes(message, "utf-8")
-	pubkey = b64decode(pub_key)
-	rsa_key = RSA.importKey(pubkey)
-	cipher = PKCS1_v1_5.new(rsa_key)
-	ciphertext = cipher.encrypt(message)
-	emsg = b64encode(ciphertext)
-	encrypted_msg = emsg.decode("UTF-8")
-	return encrypted_msg
+	pub_key_der = b64decode(pub_key)
+
+	# Load public key
+	public_key = serialization.load_der_public_key(pub_key_der, backend=default_backend())
+
+	# Encrypt using OAEP with SHA-1
+	encrypted = public_key.encrypt(
+		message.encode("utf-8"),
+		padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA1()), algorithm=hashes.SHA1(), label=None),
+	)
+
+	# Return base64 encoded encrypted message
+	return b64encode(encrypted).decode("utf-8")
 
 
 @frappe.whitelist()
@@ -276,13 +197,13 @@ def set_consent_attachment_details(doc, method=None):
 
 def get_abha_card(token, patient=None):
 	header = {"X-Token": "Bearer " + token}
-	response = abdm_request("", "get_card", "Health ID", header, "", patient_name=patient)
-	return response.get("file_url")
+	response = abdm_request("", "get_account_card", "Health ID", header, "", patient_name=patient)
+	return response
 
 
 # Milestone - 2
 @frappe.whitelist()
-def get_token_for_hiecm():
+def get_authorization_token():
 	settings = get_abdm_settings()
 
 	if not settings.consent_base_url:
@@ -291,7 +212,7 @@ def get_token_for_hiecm():
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	config = get_url("hiecm_session")
+	config = get_url("authorization")
 	url = settings.consent_base_url + config.get("url")
 	payload = {
 		"clientId": settings.client_id,
@@ -305,7 +226,7 @@ def get_token_for_hiecm():
 		"X-CM-ID": settings.x_cm_id,
 	}
 
-	return request_and_post(url, payload, headers, config.get("method"), "Facility Access Token")
+	return request_and_post(url, payload, headers, config.get("method"), "Authorization Access Token")
 
 
 def generate_unique_id():
@@ -323,7 +244,7 @@ def update_bridge_url():
 		)
 
 	bridge_url = settings.bridge_url
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("update_bridge")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -362,7 +283,7 @@ def register_bridge_service(company=None):
 			msg="Facility Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("register_bridge")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -411,7 +332,7 @@ def get_bridge_by_service_id():
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("find_bridge_by_service_id")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -445,7 +366,7 @@ def get_services_by_bridge_id():
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("find_services_by_bridge_id")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -481,7 +402,7 @@ def generate_hip_token(**args):
 		)
 
 	args = frappe._dict(args)
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("hip_generate_token")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -553,7 +474,7 @@ def link_carecontext(doctype=None, docname=None):
 				msg="Consent Management Base URL not configured in ABDM Settings!",
 			)
 
-		token = get_token_for_hiecm()
+		token = get_authorization_token()
 		config = get_url("link_carecontext")
 
 		authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -612,7 +533,7 @@ def on_discover(abha_address=None, transaction_id=None, request_id=None):
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("on_discover")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -649,7 +570,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("on_init")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -671,7 +592,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 		"response": {"requestId": request_id},
 	}
 	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
-	mobile_no = "" #get_patient_mobile_number(patient, transaction_id)
+	mobile_no = ""  # get_patient_mobile_number(patient, transaction_id)
 	headers = {
 		"Content-Type": "application/json",
 		"REQUEST-ID": generate_unique_id(),
@@ -741,7 +662,9 @@ def get_patient_details(abha_address=None):
 	return details
 
 
-def request_and_post(url=None, payload=None, headers=None, method="POST", request_name=None):
+def request_and_post(
+	url=None, payload=None, headers=None, method="POST", request_name=None, patient=None
+):
 	req = frappe.new_doc("ABDM Request")
 	req.request = json.dumps(payload, indent=4)
 	req.url = url
@@ -757,26 +680,41 @@ def request_and_post(url=None, payload=None, headers=None, method="POST", reques
 		)
 		response.raise_for_status()
 		try:
-			response = response.json()
+			if request_name in ["get_card", "get_account_card"]:
+				from frappe.utils.file_manager import save_file
+
+				file = save_file(
+					f"abha_card-{patient}.png",
+					response.content,
+					"Patient",
+					patient,
+					df="abha_card",
+					decode=False,
+					is_private=0,
+				)
+				frappe.db.commit()
+				response = file.file_url
+			else:
+				response = response.json()
 		except Exception as e:
 			response = response.text
 
-		req.response = json.dumps(response, indent=4) if response else ""
+		if isinstance(response, dict):
+			req.response = json.dumps(response, indent=4)
+		else:
+			req.response = response
 		req.status = "Granted"
 		req.insert(ignore_permissions=True)
 		return response
 
 	except Exception as e:
-		try:
-			req.response = json.dumps(response.json(), indent=4)
-		except json.decoder.JSONDecodeError:
-			req.response = response.text
+		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
+		frappe.log_error(message=traceback, title="Failed to Initiate Request")
+		req.response = traceback
 		req.traceback = e
 		req.status = "Revoked"
 		req.insert(ignore_permissions=True)
-		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
-		frappe.log_error(message=traceback, title="Failed to Initiate Request")
-		return response.json() if response.json() else response.text
+		return {"traceback": e}
 
 
 def get_abdm_settings(company=None):
@@ -896,7 +834,7 @@ def send_sms(patient, mobile_no):
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
-	token = get_token_for_hiecm()
+	token = get_authorization_token()
 	config = get_url("sms_notify")
 
 	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
@@ -906,13 +844,7 @@ def send_sms(patient, mobile_no):
 	payload = {
 		"requestId": generate_unique_id(),
 		"timestamp": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
-		"notification": {
-			"phoneNo": mobile_no,
-			"hip": {
-				"name": "ess-hip",
-				"id": "ess-hip"
-			}
-		}
+		"notification": {"phoneNo": mobile_no, "hip": {"name": "ess-hip", "id": "ess-hip"}},
 	}
 
 	headers = {
