@@ -60,47 +60,21 @@ config = {
 		"url": "/abha/api/v3/profile/account",
 		"encrypted": False,
 	},
-	"exists_by_health_id": {
-		"method": "POST",
-		"url": "/v1/search/existsByHealthId",
-		"encrypted": False,
-	},
-	"resend_aadhaar_otp": {
-		"method": "POST",
-		"url": "/v2/registration/aadhaar/resendAadhaarOtp",
-		"encrypted": False,
-	},
-	"confirm_w_aadhaar_otp": {
-		"method": "POST",
-		"url": "/v2/auth/confirmWithAadhaarOtp",
-		"encrypted": True,
-	},
-	"confirm_w_mobile_otp": {
-		"method": "POST",
-		"url": "/v2/auth/confirmWithMobileOTP",
-		"encrypted": True,
-	},
-	"get_acc_info": {"method": "GET", "url": "/v2/account/profile", "encrypted": False},
-	"generate_aadhaar_mobile_otp": {
-		"method": "POST",
-		"url": "/v1/registration/aadhaar/generateMobileOTP",
-		"encrypted": False,
-	},
-	"verify_aadhaar_mobile_otp": {
-		"method": "POST",
-		"url": "/v1/registration/aadhaar/verifyMobileOTP",
-		"encrypted": False,
-	},
-	"generate_mobile_otp_for_linking": {
-		"method": "POST",
-		"url": "/v2/document/generate/mobile/otp",
-		"encrypted": False,
-	},
-	"verify_mobile_otp_for_linking": {
-		"method": "POST",
-		"url": "/v2/document/verify/mobile/otp",
-		"encrypted": True,
-	},
+	# "get_suggestions": {
+	# 	"method": "GET",
+	# 	"url": "/abha/api/v3/enrollment/enrol/suggestion",
+	# 	"encrypted": False,
+	# },
+	# "resend_aadhaar_otp": {
+	# 	"method": "POST",
+	# 	"url": "/v2/registration/aadhaar/resendAadhaarOtp",
+	# 	"encrypted": False,
+	# },
+	# "prefered_abha": {
+	# 	"method": "POST",
+	# 	"url": "/abha/api/v3/enrollment/enrol/abha-address",
+	# 	"encrypted": False,
+	# },
 	"hiecm_session": {"method": "POST", "url": "/gateway/v3/sessions", "encrypted": False},
 	"update_bridge": {"method": "PATCH", "url": "/gateway/v3/bridge/url", "encrypted": False},
 	"register_bridge": {

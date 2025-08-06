@@ -20,6 +20,7 @@ def abdm_request(
 	patient_name=None,
 	access_token=None,
 	token_type=None,
+	txn_id=None,
 ):
 	if payload and isinstance(payload, str):
 		payload = json.loads(payload)
@@ -68,7 +69,6 @@ def abdm_request(
 	authorization = ("Bearer " if token_type == "bearer" else "") + access_token
 	headers = {
 		"Content-Type": "application/json",
-		"Accept": "application/json",
 		"REQUEST-ID": generate_unique_id(),
 		"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
 		"Authorization": authorization,
@@ -76,6 +76,8 @@ def abdm_request(
 
 	if url_key in ["get_card", "get_account_card"]:
 		headers["Accept"] = "*/*"
+	elif url_key == "get_suggestions" and txn_id:
+		headers["Transaction_Id"] = txn_id
 	if rec_headers:
 		if isinstance(rec_headers, str):
 			rec_headers = json.loads(rec_headers)
@@ -144,23 +146,6 @@ def get_rsa_encrypted_message(message, pub_key):
 	return b64encode(encrypted).decode("utf-8")
 
 
-@frappe.whitelist()
-def get_health_data(otp, txnId, auth_method, patient=None):
-	confirm_w_otp_payload = {"to_encrypt": otp, "txnId": txnId}
-	if auth_method == "AADHAAR_OTP":
-		url_key = "confirm_w_aadhaar_otp"
-	elif auth_method == "MOBILE_OTP":
-		url_key = "confirm_w_mobile_otp"
-	# returns X-Token
-	response = abdm_request(confirm_w_otp_payload, url_key, "Health ID", "", "otp")
-	abha_url = ""
-	if response and response.get("token"):
-		abha_url = get_abha_card(response["token"], patient)
-		header = {"X-Token": "Bearer " + response["token"]}
-		response = abdm_request("", "get_acc_info", "Health ID", header, "")
-	return response, abha_url
-
-
 # patient after_insert
 def set_consent_attachment_details(doc, method=None):
 	if frappe.db.exists(
@@ -193,12 +178,6 @@ def set_consent_attachment_details(doc, method=None):
 						"attached_to_field": doc.abha_card,
 					},
 				)
-
-
-def get_abha_card(token, patient=None):
-	header = {"X-Token": "Bearer " + token}
-	response = abdm_request("", "get_account_card", "Health ID", header, "", patient_name=patient)
-	return response
 
 
 # Milestone - 2
@@ -678,7 +657,6 @@ def request_and_post(
 			headers=headers,
 			data=json.dumps(payload) or None,
 		)
-		response.raise_for_status()
 		try:
 			if request_name in ["get_card", "get_account_card"]:
 				from frappe.utils.file_manager import save_file
@@ -699,7 +677,7 @@ def request_and_post(
 		except Exception as e:
 			response = response.text
 
-		if isinstance(response, dict):
+		if not isinstance(response, str):
 			req.response = json.dumps(response, indent=4)
 		else:
 			req.response = response
