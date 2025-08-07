@@ -682,7 +682,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 		"response": {"requestId": request_id},
 	}
 	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
-	mobile_no = "" #get_patient_mobile_number(patient, transaction_id)
+	mobile_no = ""  # get_patient_mobile_number(patient, transaction_id)
 	headers = {
 		"Content-Type": "application/json",
 		"REQUEST-ID": generate_unique_id(),
@@ -750,44 +750,6 @@ def get_patient_details(abha_address=None):
 			)
 
 	return details
-
-
-def request_and_post(url=None, payload=None, headers=None, method="POST", request_name=None):
-	req = frappe.new_doc("ABDM Request")
-	req.request = json.dumps(payload, indent=4)
-	req.url = url
-	req.request_name = request_name
-	req.header = json.dumps(headers, indent=4)
-
-	try:
-		response = requests.request(
-			method=method,
-			url=url,
-			headers=headers,
-			data=json.dumps(payload) or None,
-		)
-		response.raise_for_status()
-		try:
-			response = response.json()
-		except Exception as e:
-			response = response.text
-
-		req.response = json.dumps(response, indent=4) if response else ""
-		req.status = "Granted"
-		req.insert(ignore_permissions=True)
-		return response
-
-	except Exception as e:
-		try:
-			req.response = json.dumps(response.json(), indent=4)
-		except json.decoder.JSONDecodeError:
-			req.response = response.text
-		req.traceback = e
-		req.status = "Revoked"
-		req.insert(ignore_permissions=True)
-		traceback = f"Remote URL {url}\nPayload: {payload}\nTraceback: {e}"
-		frappe.log_error(message=traceback, title="Failed to Initiate Request")
-		return response.json() if response.json() else response.text
 
 
 def get_carecontext(doc):
@@ -905,13 +867,7 @@ def send_sms(patient, mobile_no):
 	payload = {
 		"requestId": generate_unique_id(),
 		"timestamp": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
-		"notification": {
-			"phoneNo": mobile_no,
-			"hip": {
-				"name": "ess-hip",
-				"id": "ess-hip"
-			}
-		}
+		"notification": {"phoneNo": mobile_no, "hip": {"name": "ess-hip", "id": "ess-hip"}},
 	}
 
 	headers = {
