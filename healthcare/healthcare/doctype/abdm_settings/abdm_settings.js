@@ -41,7 +41,7 @@ frappe.ui.form.on('ABDM Settings', {
 								},
 							],
 							secondary_action_label: 'Close',
-							secondary_action(values) {
+							secondary_action() {
 								dialog.hide();
 							},
 						});
@@ -54,7 +54,9 @@ frappe.ui.form.on('ABDM Settings', {
 				frm.add_custom_button(__("Update Bridge URL"), function () {
 					frappe.call({
 						method: 'healthcare.regional.india.abdm.utils.update_bridge_url',
-						callback: function (data) {}
+						freeze: true,
+						freeze_message: __('Updating Bridge URL...'),
+						callback: function () {}
 					});
 				});
 			}
@@ -65,7 +67,9 @@ frappe.ui.form.on('ABDM Settings', {
 				frappe.call({
 					method: 'healthcare.regional.india.abdm.utils.register_bridge_service',
 					args:{ company: frm.doc.company},
-					callback: function (data) {}
+					freeze: true,
+					freeze_message: __('Registering Service...'),
+					callback: function () {}
 				});
 			});
 		}

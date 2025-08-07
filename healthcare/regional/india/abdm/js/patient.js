@@ -799,7 +799,8 @@ let create_abha_with_aadhaar = function (frm, d) {
 			},
 			"url_key": "generate_aadhaar_otp",
 			"req_type": "Health ID",
-			"to_be_enc": "loginId"
+			"to_be_enc": "loginId",
+			"patient_name": frm.doc.name
 		},
 		freeze: true,
 		freeze_message: __("Sending OTP..."),
