@@ -1,85 +1,80 @@
 config = {
-	"authorization": {"method": "POST", "url": "/v0.5/sessions", "encrypted": False},
-	"exists_by_health_id": {
-		"method": "POST",
-		"url": "/v1/search/existsByHealthId",
+	"authorization": {"method": "POST", "url": "/api/hiecm/gateway/v3/sessions", "encrypted": False},
+	"auth_cert": {
+		"method": "GET",
+		"url": "/abha/api/v3/profile/public/certificate",
 		"encrypted": False,
 	},
-	"verify_health_id": {"method": "POST", "url": "/v1/search/searchByHealthId", "encrypted": False},
-	"generate_aadhaar_otp": {
+	"verify_abha_address": {
 		"method": "POST",
-		"url": "/v1/registration/aadhaar/generateOtp",
+		"url": "/abha/api/v3/phr/web/login/abha/search",
 		"encrypted": False,
 	},
-	"generate_mobile_otp": {
+	"verify_abha_number": {
 		"method": "POST",
-		"url": "/v2/registration/mobile/generateOtp",
-		"encrypted": False,
-	},
-	"verify_mobile_otp": {
-		"method": "POST",
-		"url": "/v2/registration/mobile/verifyOtp",
+		"url": "/abha/api/v3/profile/login/request/otp",
 		"encrypted": True,
 	},
-	"resend_mobile_otp": {
+	"verify_abha_number_otp": {
 		"method": "POST",
-		"url": "/v2/registration/mobile/resendOtp",
-		"encrypted": False,
+		"url": "/abha/api/v3/profile/login/verify",
+		"encrypted": True,
 	},
-	"resend_aadhaar_otp": {
+	"send_abha_address_otp": {
 		"method": "POST",
-		"url": "/v2/registration/aadhaar/resendAadhaarOtp",
-		"encrypted": False,
+		"url": "/abha/api/v3/phr/web/login/abha/request/otp",
+		"encrypted": True,
+	},
+	"verify_abha_address_otp": {
+		"method": "POST",
+		"url": "/abha/api/v3/phr/web/login/abha/verify",
+		"encrypted": True,
+	},
+	"generate_aadhaar_otp": {
+		"method": "POST",
+		"url": "/abha/api/v3/enrollment/request/otp",
+		"encrypted": True,
 	},
 	"create_abha_w_aadhaar": {
 		"method": "POST",
-		"url": "/v1/registration/aadhaar/createHealthIdWithAadhaarOtp",
-		"encrypted": False,
-	},
-	"create_abha_w_mobile": {
-		"method": "POST",
-		"url": "/v2/registration/mobile/createHidViaMobile",
-		"encrypted": False,
-	},
-	"auth_cert": {"method": "GET", "url": "/v2/auth/cert", "encrypted": False},
-	"auth_init": {"method": "POST", "url": "/v2/auth/init", "encrypted": False},
-	"confirm_w_aadhaar_otp": {
-		"method": "POST",
-		"url": "/v2/auth/confirmWithAadhaarOtp",
+		"url": "/abha/api/v3/enrollment/enrol/byAadhaar",
 		"encrypted": True,
 	},
-	"confirm_w_mobile_otp": {
-		"method": "POST",
-		"url": "/v2/auth/confirmWithMobileOTP",
-		"encrypted": True,
-	},
-	"get_acc_info": {"method": "GET", "url": "/v2/account/profile", "encrypted": False},
-	"generate_aadhaar_mobile_otp": {
-		"method": "POST",
-		"url": "/v1/registration/aadhaar/generateMobileOTP",
+	"get_card": {
+		"method": "GET",
+		"url": "/abha/api/v3/phr/web/login/profile/abha/phr-card",
 		"encrypted": False,
 	},
-	"verify_aadhaar_mobile_otp": {
-		"method": "POST",
-		"url": "/v1/registration/aadhaar/verifyMobileOTP",
+	"get_account_card": {
+		"method": "GET",
+		"url": "/abha/api/v3/profile/account/abha-card",
 		"encrypted": False,
 	},
-	"verify_aadhaar_otp": {
-		"method": "POST",
-		"url": "/v1/registration/aadhaar/verifyOTP",
+	"get_profile": {
+		"method": "GET",
+		"url": "/abha/api/v3/phr/web/login/profile/abha-profile",
 		"encrypted": False,
 	},
-	"generate_mobile_otp_for_linking": {
-		"method": "POST",
-		"url": "/v2/document/generate/mobile/otp",
+	"get_account_profile": {
+		"method": "GET",
+		"url": "/abha/api/v3/profile/account",
 		"encrypted": False,
 	},
-	"verify_mobile_otp_for_linking": {
-		"method": "POST",
-		"url": "/v2/document/verify/mobile/otp",
-		"encrypted": True,
-	},
-	"get_card": {"method": "GET", "url": "/v1/account/getPngCard", "encrypted": False},
+	# "get_suggestions": {
+	# 	"method": "GET",
+	# 	"url": "/abha/api/v3/enrollment/enrol/suggestion",
+	# 	"encrypted": False,
+	# },
+	# "resend_aadhaar_otp": {
+	# 	"method": "POST",
+	# 	"url": "/v2/registration/aadhaar/resendAadhaarOtp",
+	# 	"encrypted": False,
+	# },
+	# "prefered_abha": {
+	# 	"method": "POST",
+	# 	"url": "/abha/api/v3/enrollment/enrol/abha-address",
+	# 	"encrypted": False,
+	# },
 }
 
 
