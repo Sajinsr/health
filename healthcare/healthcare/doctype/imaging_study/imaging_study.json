@@ -1,0 +1,246 @@
+{
+ "actions": [],
+ "autoname": "field:study_instance_uid",
+ "creation": "2025-06-22 18:26:03.461267",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "study_section",
+  "ups_appointment",
+  "study_instance_uid",
+  "column_break_hkud",
+  "status",
+  "description",
+  "section_break_qfab",
+  "patient",
+  "patient_name",
+  "column_break_djtk",
+  "gender",
+  "date_of_birth",
+  "section_break_xsis",
+  "station_ae",
+  "modality",
+  "column_break_okrk",
+  "performer",
+  "completed_on",
+  "section_break_tlsm",
+  "column_break_mxtv",
+  "preview_html",
+  "preview_json",
+  "imaging_series_tab",
+  "series_instances_section",
+  "series",
+  "dataset"
+ ],
+ "fields": [
+  {
+   "fieldname": "patient",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Patient",
+   "options": "Patient",
+   "search_index": 1
+  },
+  {
+   "fetch_from": "station_ae.service_unit_type",
+   "fieldname": "modality",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Modality",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_hkud",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Accession\nPending Review\nReport Generated\nArchived",
+   "search_index": 1
+  },
+  {
+   "fieldname": "study_instance_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Study Instance UID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Study Completed On"
+  },
+  {
+   "fieldname": "performer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Performer (Practitioner)",
+   "options": "Healthcare Practitioner"
+  },
+  {
+   "fetch_from": "patient.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "label": "Patient Name"
+  },
+  {
+   "description": "Accession Number",
+   "fieldname": "ups_appointment",
+   "fieldtype": "Link",
+   "label": "Imaging Appointment",
+   "options": "Imaging Appointment"
+  },
+  {
+   "fieldname": "study_section",
+   "fieldtype": "Section Break",
+   "label": "Study"
+  },
+  {
+   "fieldname": "imaging_series_tab",
+   "fieldtype": "Tab Break",
+   "label": "Study Details"
+  },
+  {
+   "fieldname": "series_instances_section",
+   "fieldtype": "Section Break",
+   "label": "Contents"
+  },
+  {
+   "fieldname": "series",
+   "fieldtype": "Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "station_ae",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Station AE",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_tlsm",
+   "fieldtype": "Section Break",
+   "label": "Series Preview"
+  },
+  {
+   "fieldname": "preview_html",
+   "fieldtype": "HTML",
+   "label": "Series Preview"
+  },
+  {
+   "fieldname": "column_break_mxtv",
+   "fieldtype": "Column Break",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Data",
+   "label": "Gender"
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth"
+  },
+  {
+   "fieldname": "section_break_xsis",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_okrk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_qfab",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_djtk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dataset",
+   "fieldtype": "Code",
+   "label": "Dataset",
+   "read_only": 1
+  },
+  {
+   "fieldname": "preview_json",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Preview JSON",
+   "no_copy": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-08-02 14:35:01.216884",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Imaging Study",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Physician",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Laboratory User",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Nursing User",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

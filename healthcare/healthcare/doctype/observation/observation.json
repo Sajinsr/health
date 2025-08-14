@@ -13,49 +13,55 @@
   "naming_series",
   "observation_template",
   "observation_category",
-  "appointment",
   "column_break_7xu5",
   "company",
   "posting_date",
   "status",
   "medical_department",
-  "amended_from",
   "section_break_i70a",
   "patient",
   "patient_name",
   "column_break_qxq5",
-  "age",
   "gender",
+  "age",
+  "days",
   "section_break_zz5k",
   "healthcare_practitioner",
   "practitioner_name",
   "template_details_section",
-  "has_component",
   "preferred_display_name",
-  "sample_collection_required",
-  "permitted_unit",
-  "column_break_pxgu",
-  "sample",
-  "sample_type",
-  "permitted_data_type",
   "method",
+  "column_break_pxgu",
+  "permitted_data_type",
+  "permitted_unit",
+  "has_component",
   "column_break_meur",
+  "sample_collection_required",
+  "sample_type",
+  "sample",
   "specimen",
-  "sample_collection_time",
   "column_break_yo05",
   "sample_status",
+  "sample_collection_time",
+  "imaging_procedure_section",
+  "study_instance_uid",
+  "imaging_study",
+  "column_break_cgmc",
+  "ups_appointment",
+  "modality",
+  "exam_status",
   "result_section",
   "result_template",
-  "result_attach",
+  "result_text",
   "result_boolean",
   "result_data",
-  "result_text",
   "result_float",
   "result_select",
   "result_datetime",
   "result_time",
   "result_period_from",
   "result_period_to",
+  "result_attach",
   "options",
   "time_of_result",
   "time_of_approval",
@@ -83,8 +89,8 @@
   "disapproval_reason",
   "parent_observation",
   "observation_idx",
-  "days",
-  "invoiced"
+  "invoiced",
+  "amended_from"
  ],
  "fields": [
   {
@@ -165,14 +171,13 @@
   },
   {
    "fieldname": "section_break_i70a",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Patient Details"
   },
   {
    "fetch_from": "observation_template.permitted_data_type",
    "fieldname": "permitted_data_type",
    "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Permitted Data Type",
    "options": "Quantity\nSelect\nText\nBoolean\nNumeric\nRange\nRatio\nTime\nDateTime\nPeriod\nAttach",
    "read_only_depends_on": "observation_template"
@@ -256,6 +261,7 @@
    "label": "Result"
   },
   {
+   "depends_on": "eval:doc.observation_category == \"Laboratory\"",
    "fieldname": "column_break_meur",
    "fieldtype": "Section Break",
    "label": "Sample Details"
@@ -432,7 +438,8 @@
   },
   {
    "fieldname": "section_break_zz5k",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Ordering Practitioner"
   },
   {
    "fieldname": "healthcare_practitioner",
@@ -505,8 +512,7 @@
   {
    "fieldname": "days",
    "fieldtype": "Int",
-   "hidden": 1,
-   "label": "Days",
+   "label": "Age in Days",
    "read_only": 1
   },
   {
@@ -567,16 +573,56 @@
    "read_only": 1
   },
   {
-   "fieldname": "appointment",
+   "depends_on": "eval:doc.observation_category == \"Imaging\"",
+   "description": "Accession Number",
+   "fieldname": "ups_appointment",
    "fieldtype": "Link",
-   "label": "Appointment",
-   "options": "Patient Appointment"
+   "label": "Imaging Appointment",
+   "options": "Imaging Appointment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "imaging_procedure_section",
+   "fieldtype": "Section Break",
+   "label": "Imaging Procedure"
+  },
+  {
+   "fetch_from": "ups_appointment.status",
+   "fieldname": "exam_status",
+   "fieldtype": "Data",
+   "label": "Exam Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cgmc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "study_instance_uid",
+   "fieldtype": "Data",
+   "label": "Study Instance UID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "imaging_study",
+   "fieldtype": "Link",
+   "label": "Imaging Study",
+   "options": "Imaging Study",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.observation_category == \"Imaging\"",
+   "fetch_from": "ups_appointment.claimed_by",
+   "fieldname": "modality",
+   "fieldtype": "Data",
+   "label": "Modality (Service Unit)",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-29 23:04:47.368632",
+ "modified": "2025-07-27 16:21:28.789577",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "Observation",

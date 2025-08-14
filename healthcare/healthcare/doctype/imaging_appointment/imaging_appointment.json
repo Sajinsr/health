@@ -1,0 +1,357 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2025-06-23 15:40:25.963518",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ups_rs_section",
+  "ups_instance_uid",
+  "column_break_ehcs",
+  "claimed_by",
+  "details_section",
+  "appointment",
+  "observation_template",
+  "referred_to_practitioner",
+  "practitioner_name",
+  "referring_practitioner",
+  "column_break_fszz",
+  "status",
+  "station_ae",
+  "modality",
+  "scheduled_date",
+  "scheduled_time",
+  "section_break_klcv",
+  "patient",
+  "patient_name",
+  "column_break_nypq",
+  "gender",
+  "date_of_birth",
+  "section_break_xewj",
+  "study_instance_uid",
+  "imaging_study",
+  "cancelled_by",
+  "modality_transaction_id",
+  "column_break_decp",
+  "study_start_time",
+  "study_finish_time",
+  "performer",
+  "mpps_tab",
+  "mpps_events_section",
+  "n_create",
+  "n_set",
+  "n_cancel",
+  "dataset"
+ ],
+ "fields": [
+  {
+   "fieldname": "appointment",
+   "fieldtype": "Link",
+   "label": "Appointment",
+   "link_filters": "[[\"Patient Appointment\",\"status\",\"not in\",[\"Closed\",\"Cancelled\",null]]]",
+   "options": "Patient Appointment",
+   "search_index": 1
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule"
+  },
+  {
+   "default": "Scheduled",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Scheduled\nIn Progress\nCompleted\nCancelled",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "appointment.patient",
+   "fieldname": "patient",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Patient",
+   "options": "Patient",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "station_ae.service_unit_type",
+   "fieldname": "modality",
+   "fieldtype": "Link",
+   "label": "Modality",
+   "options": "Healthcare Service Unit Type",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_fszz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_xewj",
+   "fieldtype": "Section Break",
+   "label": "Study Information"
+  },
+  {
+   "fieldname": "study_instance_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Study Instance UID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_decp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "patient.sex",
+   "fieldname": "gender",
+   "fieldtype": "Link",
+   "label": "Gender",
+   "options": "Gender",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "patient.dob",
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "appointment.appointment_date",
+   "fieldname": "scheduled_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Scheduled Date",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "appointment.appointment_time",
+   "fieldname": "scheduled_time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Scheduled Time"
+  },
+  {
+   "fieldname": "study_start_time",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Study Start Time",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "appointment.template_dn",
+   "fieldname": "observation_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Observation Template",
+   "options": "Observation Template",
+   "search_index": 1
+  },
+  {
+   "fieldname": "performer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Performer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "study_finish_time",
+   "fieldtype": "Data",
+   "label": "Study Finish Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "referred_to_practitioner",
+   "fieldtype": "Link",
+   "label": "Referred to Practitioner",
+   "options": "Healthcare Practitioner",
+   "search_index": 1
+  },
+  {
+   "fieldname": "referring_practitioner",
+   "fieldtype": "Link",
+   "label": "Referring Practitioner",
+   "options": "Healthcare Practitioner"
+  },
+  {
+   "description": "Modality",
+   "fieldname": "claimed_by",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Claimed By AE",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ups_instance_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "UPS Instance UID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "patient.patient_name",
+   "fieldname": "patient_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Patient Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ups_rs_section",
+   "fieldtype": "Section Break",
+   "label": "UPS-RS"
+  },
+  {
+   "fieldname": "column_break_ehcs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mpps_tab",
+   "fieldtype": "Tab Break",
+   "label": "Study Events"
+  },
+  {
+   "fieldname": "mpps_events_section",
+   "fieldtype": "Section Break",
+   "label": "MPPS Events"
+  },
+  {
+   "fieldname": "imaging_study",
+   "fieldtype": "Link",
+   "label": "Imaging Study",
+   "options": "Imaging Study",
+   "read_only": 1
+  },
+  {
+   "fieldname": "n_create",
+   "fieldtype": "Code",
+   "label": "N-CREATE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "n_set",
+   "fieldtype": "Code",
+   "label": "N-SET",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "appointment.service_unit",
+   "fieldname": "station_ae",
+   "fieldtype": "Link",
+   "label": "Station AE Title",
+   "link_filters": "[[\"Healthcare Service Unit\",\"is_modality\",\"=\",1]]",
+   "options": "Healthcare Service Unit",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "referred_to_practitioner.practitioner_name",
+   "fieldname": "practitioner_name",
+   "fieldtype": "Data",
+   "label": "Practitioner Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_klcv",
+   "fieldtype": "Section Break",
+   "label": "Patient"
+  },
+  {
+   "fieldname": "column_break_nypq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "modality_transaction_id",
+   "fieldtype": "Data",
+   "label": "Modality Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_by",
+   "fieldtype": "Data",
+   "label": "Cancelled by AE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "n_cancel",
+   "fieldtype": "Code",
+   "label": "N-CANCEL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dataset",
+   "fieldtype": "Code",
+   "label": "Dataset",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-08-02 14:35:49.577282",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Imaging Appointment",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Physician",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Laboratory User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Nursing User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
