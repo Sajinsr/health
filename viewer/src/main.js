@@ -10,8 +10,6 @@ async function bootstrap() {
 
   const app = createApp(DICOMViewer)
   app.mount('#app')
-
-  console.log("Vue app is booting")
 }
 
 bootstrap()
