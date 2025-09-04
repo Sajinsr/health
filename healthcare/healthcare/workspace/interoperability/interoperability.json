@@ -1,0 +1,205 @@
+{
+ "app": "healthcare",
+ "charts": [],
+ "content": "[{\"id\":\"ihIOKg8eqz\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Your Shortcuts</span>\",\"col\":12}},{\"id\":\"Qb7D6kUBm2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR IG\",\"col\":3}},{\"id\":\"lpchorjFFX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR Resource\",\"col\":4}},{\"id\":\"KduBKQIPkp\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR Capability Statement\",\"col\":5}},{\"id\":\"ENjprgpAyX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR Resource Map\",\"col\":4}},{\"id\":\"4V8HcDiTyn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR Profile\",\"col\":4}},{\"id\":\"m__8YYbMgT\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"FHIR Version\",\"col\":4}},{\"id\":\"RIHjeAsqc8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Documents</b></span>\",\"col\":12}},{\"id\":\"mVO73TFXh-\",\"type\":\"card\",\"data\":{\"card_name\":\"Artefacts\",\"col\":4}},{\"id\":\"G9uSsPelrF\",\"type\":\"card\",\"data\":{\"card_name\":\"Configurations\",\"col\":4}},{\"id\":\"WEMIBKNltl\",\"type\":\"card\",\"data\":{\"card_name\":\"Setup\",\"col\":4}}]",
+ "creation": "2025-09-04 16:03:28.805116",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 1,
+ "icon": "change",
+ "idx": 0,
+ "indicator_color": "orange",
+ "is_hidden": 0,
+ "label": "Interoperability",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Artefacts",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Resource",
+   "link_count": 0,
+   "link_to": "FHIR Resource",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Implementation Guide",
+   "link_count": 0,
+   "link_to": "FHIR Implementation Guide",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Capability Statement",
+   "link_count": 0,
+   "link_to": "FHIR Capability Statement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Structure Definition",
+   "link_count": 0,
+   "link_to": "FHIR Structure Definition",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Search Parameter",
+   "link_count": 0,
+   "link_to": "FHIR Search Parameter",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Datatype",
+   "link_count": 0,
+   "link_to": "FHIR Datatype",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configurations",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Resource Map",
+   "link_count": 0,
+   "link_to": "FHIR Resource Map",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Profile",
+   "link_count": 0,
+   "link_to": "FHIR Profile",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FHIR Version",
+   "link_count": 0,
+   "link_to": "FHIR Version",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-09-04 16:32:30.658696",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "Interoperability",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Healthcare",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 30.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "FHIR Resource Map",
+   "link_to": "FHIR Resource Map",
+   "stats_filter": "[[\"FHIR Resource Map\",\"is_active\",\"=\",1,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "FHIR Profile",
+   "link_to": "FHIR Profile",
+   "stats_filter": "[[\"FHIR Profile\",\"is_active\",\"=\",1,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "format": "{} Created",
+   "label": "FHIR IG",
+   "link_to": "FHIR Implementation Guide",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "format": "{} Created",
+   "label": "FHIR Resource",
+   "link_to": "FHIR Resource",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "FHIR Version",
+   "link_to": "FHIR Version",
+   "stats_filter": "[[\"FHIR Version\",\"is_active\",\"=\",1,false]]",
+   "type": "DocType"
+  },
+  {
+   "color": "Pink",
+   "doc_view": "List",
+   "format": "{} Active",
+   "label": "FHIR Capability Statement",
+   "link_to": "FHIR Capability Statement",
+   "stats_filter": "[[\"FHIR Capability Statement\",\"publication_status\",\"=\",\"Active\",false]]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Interoperability",
+ "type": "Workspace"
+}
