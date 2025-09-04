@@ -1,4 +1,4 @@
-# Copyright (c) 2025, earthians Health Informatics Pvt. Ltd. and contributors
+# Copyright (c) 2025, earthians Health Informatics Pvt. Ltd.
 # For license information, please see license.txt
 
 import re
@@ -6,27 +6,51 @@ from datetime import date, datetime
 
 import frappe
 
-PRIMITIVE_TYPES = {
-	"boolean",
-	"integer",
-	"decimal",
-	"string",
-	"uri",
-	"url",
-	"canonical",
-	"base64Binary",
-	"instant",
-	"date",
-	"dateTime",
-	"time",
-	"code",
-	"oid",
-	"id",
-	"markdown",
-	"unsignedInt",
-	"positiveInt",
-	"xhtml",
-}
+
+# @functools.lru_cache()
+def get_primitive_datatypes():
+	return frappe.get_all("FHIR Datatype", filters={"is_primitive": 1}, pluck="name")
+
+
+def get_value_from_map(element_map, frappe_doc=None):
+	for key in ("fixed_value", "frappe_field", "pattern_value", "default_value"):
+		value = getattr(element_map, key, None)
+		if key == "frappe_field" and value:
+			value = getattr(frappe_doc, value, None)
+
+		if value not in (None, "", [], {}):
+			return value
+	return None
+
+
+def resolve_datatype(mapping, frappe_doc=None):
+	dt = getattr(mapping, "fhir_datatype", None) or getattr(mapping, "datatype", None)
+	if not dt:
+		return None
+
+	if isinstance(dt, str) and "," in dt:
+		choices = [t.strip() for t in dt.split(",") if t.strip()]
+		if not choices:
+			return None
+
+		# TODO: handle other primitive types?
+		val = None
+		try:
+			val = get_value_from_map(mapping, frappe_doc) if frappe_doc else None
+		except Exception:
+			val = None
+
+		if isinstance(val, bool) and "boolean" in choices:
+			return "boolean"
+		if isinstance(val, int) and "integer" in choices:
+			return "integer"
+		if isinstance(val, (date, datetime)) and "dateTime" in choices:
+			return "dateTime"
+
+		# fallback: first declared
+		return choices[0]
+
+	return dt
 
 
 class PrimitiveDatatypeBuilder:
@@ -34,32 +58,36 @@ class PrimitiveDatatypeBuilder:
 		self.frappe_doc = frappe_doc
 
 	def build(self, mapping):
-		raw_value = self.get_mapped_value(mapping)
+		raw_value = get_value_from_map(mapping, self.frappe_doc)
 		if raw_value is not None:
-			return self._ensure_valid_primitive_type(raw_value, mapping.fhir_datatype)
-		return None
-
-	def get_mapped_value(self, element_map):
-		for key in ("fixed_value", "frappe_field", "pattern_value", "default_value"):
-			value = getattr(element_map, key, None)
-			if key == "frappe_field" and value:
-				value = self.frappe_doc.get(value)
-			if value not in (None, "", [], {}):
-				return value
+			datatype = resolve_datatype(mapping, self.frappe_doc)
+			return self._ensure_valid_primitive_type(raw_value, datatype)
 		return None
 
 	def _ensure_valid_primitive_type(self, value, datatype):
+		if not datatype:
+			return value
+
+		# normalize strings
+		as_text = value.strip() if isinstance(value, str) else None
+
 		if datatype == "boolean":
 			if isinstance(value, str):
-				return value.strip().lower() in ("1", "true", "yes")
+				return (as_text or "").lower() in {"1", "true", "yes", "y", "t"}
 			return bool(value)
 
 		if datatype in {"positiveInt", "unsignedInt", "integer"}:
 			try:
-				return int(value)
+				iv = int(value)
+				if datatype == "positiveInt" and iv <= 0:
+					return None
+				if datatype == "unsignedInt" and iv < 0:
+					return None
+				return iv
 			except (ValueError, TypeError):
 				frappe.log_error(
-					f"Invalid integer for {datatype}: {value}", "FHIR Primitive Datatype casting error"
+					f"Invalid integer for {datatype}: {value}",
+					"FHIR Primitive Datatype casting error",
 				)
 				return None
 
@@ -67,27 +95,66 @@ class PrimitiveDatatypeBuilder:
 			try:
 				return float(value)
 			except (ValueError, TypeError):
-				frappe.log_error(f"Invalid decimal: {value}", "FHIR Primitive Datatype casting error")
+				frappe.log_error(
+					f"Invalid decimal: {value}",
+					"FHIR Primitive Datatype casting error",
+				)
 				return None
 
 		if datatype == "code":
-			value = str(value).strip()
-			return value.lower()
+			return str(value).strip()
+
+		if datatype in {"uri", "url", "canonical"}:
+			return as_text or str(value)
 
 		if datatype in {"date", "dateTime", "instant"}:
 			if isinstance(value, (date, datetime)):
 				return value.isoformat()
-			return str(value).strip()
+			return as_text or str(value)
 
-		# TODO: add more as required
-
+		# pass through the rest (string, id, markdown, time, oid, base64Binary etc.)
 		return value
+
+
+class ExtensionBuilder:
+	def __init__(self, mappings_by_path, frappe_doc):
+		self.mappings_by_path = mappings_by_path
+		self.frappe_doc = frappe_doc
+		self.primitive_builder = PrimitiveDatatypeBuilder(self.frappe_doc)
+
+	def build(self, parent_path):
+		mapping = self.mappings_by_path.get(parent_path)
+		extensions = []
+
+		# determine URL to use for this extension group
+		preferred_url = (
+			getattr(mapping, "extension_url", None) or getattr(mapping, "fhir_path", None) or parent_path
+		)
+
+		# 1) parent's own value, if any
+		value = self.primitive_builder.build(mapping)
+		if value is not None:
+			extensions.append({"url": preferred_url, "valueString": value})
+
+		# 2) direct children become separate extensions
+		for path, child_map in self._get_child_mappings(parent_path).items():
+			child_value = self.primitive_builder.build(child_map)
+			if child_value is not None:
+				child_url = getattr(child_map, "extension_url", None) or path
+				extensions.append({"url": child_url, "valueString": child_value})
+
+		return extensions if extensions else None
+
+	def _get_child_mappings(self, parent_path):
+		prefix = parent_path + "."
+		return {path: m for path, m in self.mappings_by_path.items() if path.startswith(prefix)}
 
 
 class ComplexDatatypeBuilder:
 	def __init__(self, mappings_by_path, frappe_doc):
 		self.mappings_by_path = mappings_by_path
 		self.frappe_doc = frappe_doc
+		# child mappings can be primitive / extension / complex
 		self.primitive_builder = PrimitiveDatatypeBuilder(self.frappe_doc)
 		self.extension_builder = ExtensionBuilder(self.mappings_by_path, self.frappe_doc)
 
@@ -98,12 +165,14 @@ class ComplexDatatypeBuilder:
 		for path, mapping in child_mappings.items():
 			relative_leaf = path[len(parent_path) + 1 :]
 			if "." in relative_leaf:
+				# only direct children here; nested handled by recursion
 				continue
+
 			leaf = relative_leaf
-			datatype = mapping.fhir_datatype
+			datatype = resolve_datatype(mapping, self.frappe_doc)
 			max_cardinality = mapping.max
 
-			if datatype in PRIMITIVE_TYPES:
+			if datatype in get_primitive_datatypes():
 				value = self.primitive_builder.build(mapping)
 				if value is not None:
 					result[leaf] = [value] if max_cardinality == "*" else value
@@ -114,6 +183,7 @@ class ComplexDatatypeBuilder:
 					result[leaf] = ext
 
 			else:
+				# Treat any non-primitive (including BackboneElement/Resource) as complex
 				nested = self.build(path)
 				if nested:
 					result[leaf] = [nested] if max_cardinality == "*" else nested
@@ -122,18 +192,15 @@ class ComplexDatatypeBuilder:
 
 	def _get_child_mappings(self, parent_path):
 		prefix = parent_path + "."
+		return {path: m for path, m in self.mappings_by_path.items() if path.startswith(prefix)}
 
-		direct_mappings = {
-			path: mapping for path, mapping in self.mappings_by_path.items() if path.startswith(prefix)
-		}
-		return direct_mappings
-
+	# Kept for future: pull unmapped children from the datatype table if desired.
 	def _get_unmapped_children(self, parent_path):  # unused
 		parent_mapping = self.mappings_by_path.get(parent_path)
 		if not parent_mapping:
 			return {}
 
-		datatype = parent_mapping.fhir_datatype
+		datatype = resolve_datatype(parent_mapping, self.frappe_doc)
 		if not datatype or frappe.db.get_value("FHIR Datatype", datatype, "is_primitive"):
 			return {}
 
@@ -145,46 +212,18 @@ class ComplexDatatypeBuilder:
 		)
 
 		return {
-			f"{parent_path}.{child.fieldname}": frappe._dict(
-				fhir_path=f"{parent_path}.{child.fieldname}",
-				fhir_datatype=child.datatype,
+			f"{parent_path}.{child.element_name}": frappe._dict(
+				fhir_path=f"{parent_path}.{child.element_name}",
+				datatype=child.fhir_datatype,
 				max=child.max,
 				min=child.min,
 				is_required=child.min > 0,
-				fixed_value=None,  # TODO: set parent's value
+				fixed_value=None,
 				pattern_value=None,
 				default_value=None,
 				frappe_field=None,
 			)
 			for child in children
-		}
-
-
-class ExtensionBuilder:
-	def __init__(self, mappings_by_path, frappe_doc):
-		self.mappings_by_path = mappings_by_path
-		self.frappe_doc = frappe_doc
-		self.primitive_builder = PrimitiveDatatypeBuilder(self.frappe_doc)
-
-	def build(self, parent_path):
-		mapping = self.mappings_by_path.get(parent_path)
-		value = self.primitive_builder.build(mapping)
-		extensions = []
-
-		if value is not None:
-			extensions.append({"url": parent_path, "valueString": value})
-
-		for path, mapping in self._get_child_mappings(parent_path).items():
-			child_value = self.primitive_builder.build(mapping)
-			if child_value is not None:
-				extensions.append({"url": path, "valueString": child_value})
-
-		return extensions if extensions else None
-
-	def _get_child_mappings(self, parent_path):
-		prefix = parent_path + "."
-		return {
-			path: mapping for path, mapping in self.mappings_by_path.items() if path.startswith(prefix)
 		}
 
 
@@ -203,12 +242,11 @@ class FHIRResourceMapIterator:
 			if path in self.yielded:
 				continue
 
-			datatype = mapping.fhir_datatype
+			datatype = resolve_datatype(mapping, self.frappe_doc)
 			max_cardinality = mapping.max
 
-			if datatype in PRIMITIVE_TYPES:
+			if datatype in get_primitive_datatypes():
 				value = self.primitive_builder.build(mapping)
-
 			elif datatype == "Extension":
 				value = self.extension_builder.build(path)
 			else:
@@ -216,9 +254,8 @@ class FHIRResourceMapIterator:
 
 			if value is None:
 				continue
+
 			if max_cardinality == "*":
-				if not value:
-					continue
 				if not isinstance(value, list):
 					value = [value]
 
@@ -231,14 +268,18 @@ class FHIRResourceMapIterator:
 		return [path for path in self.mappings_by_path if path.startswith(prefix)]
 
 	def _validate(self, fhir_path, value, mapping):
-		if mapping.regex and isinstance(value, str):
+		"""validation skeleton regex and code"""
+		if getattr(mapping, "regex", None) and isinstance(value, str):
 			if not re.fullmatch(mapping.regex, value):
 				frappe.log_error(
-					f"Value '{value}' for {fhir_path} failed regex {mapping.regex}", "FHIR Validation Error"
+					f"Value '{value}' for {fhir_path} failed regex {mapping.regex}",
+					"FHIR Validation Error",
 				)
 				raise ValueError(f"{fhir_path}: regex validation failed")
 
-		if mapping.binding_strength == "required" and mapping.valueset_url:
+		if getattr(mapping, "binding_strength", None) == "required" and getattr(
+			mapping, "valueset_url", None
+		):
 			valid_codes = self._get_valid_codes(mapping.valueset_url)
 			if value not in valid_codes:
 				raise ValueError(
@@ -246,9 +287,7 @@ class FHIRResourceMapIterator:
 				)
 
 	def _get_valid_codes(self, valueset_url):
-		codes = frappe.get_all(
-			"FHIR Code Value", filters={"valueset_url": valueset_url}, fields=["code"]
-		)
+		codes = frappe.get_all("Code Value", filters={"valueset_url": valueset_url}, fields=["code"])
 		return {c.code for c in codes}
 
 
@@ -275,21 +314,24 @@ class FHIRResourceGenerator:
 		parts = dotted_path.split(".")
 		current = resource
 		for part in parts[:-1]:
-			current = current.setdefault(part, {})
+			current = current.setdefault(part, {})  # check if mapped?
+
 		current[parts[-1]] = value
 
 	def _add_meta(self):
-		if not self.map_doc.fhir_profile:
+		if not getattr(self.map_doc, "fhir_profile", None):
 			return {}
-		return {"meta": {"profile": [self.map_doc.fhir_profile]}}
+		return {"meta": {"profile": [self.map_doc.url]}}
 
 	def _add_narrative(self, resource):
-		if not self.map_doc.narrative_template:
+		#  If a template is set, render it. Otherwise leave text alone, it could
+		#  also be provided via the map if Patient.text.status/div children is added.
+		template_name = getattr(self.map_doc, "narrative_template", None)
+		if not template_name:
 			return {}
 
-		template = frappe.get_doc("Terms and Conditions", self.map_doc.narrative_template)
+		template = frappe.get_doc("Terms and Conditions", template_name)
 		raw_html = template.terms or "<div>Missing narrative template</div>"
-
 		div_html = frappe.render_template(raw_html, {"resource": resource})
 
 		return {
