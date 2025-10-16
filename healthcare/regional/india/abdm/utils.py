@@ -234,6 +234,7 @@ def request_and_post(
 	req.url = url
 	req.request_name = request_name
 	req.header = json.dumps(headers, indent=4)
+	req.request_id = headers.get("headers") or None
 
 	try:
 		response = requests.request(
@@ -824,6 +825,7 @@ def post_abdm_request(**args):
 		req.request_name = args.request_name
 		req.header = args.headers
 		req.status = "Granted"
+		req.is_callback = args.get("is_callback") or 0
 		if args.get("abha_address"):
 			patient = frappe.db.exists("Patient", {"abha_address": args.get("abha_address")})
 			if patient:
