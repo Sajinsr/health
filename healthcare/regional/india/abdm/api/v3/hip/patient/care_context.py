@@ -36,6 +36,7 @@ def discover():
 			"company": frappe.get_cached_value("ABDM Settings", exists, "company") if exists else None,
 			"request_id": request_id,
 			"data": data,
+			"is_callback": True,
 		}
 		post_abdm_request(**args)
 		response_message = {"status": "success", "received": data, "status_code": 202}

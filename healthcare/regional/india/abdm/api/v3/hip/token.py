@@ -18,6 +18,7 @@ def on_generate_token():
 			"notification": data.get("notification"),
 			"data": data,
 			"token": data.get("linkToken"),
+			"is_callback": True,
 		}
 		post_abdm_request(**args)
 

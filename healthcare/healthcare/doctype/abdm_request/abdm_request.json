@@ -22,7 +22,8 @@
   "section_break_yowv",
   "transaction_id",
   "request_id",
-  "token"
+  "token",
+  "is_callback"
  ],
  "fields": [
   {
@@ -130,6 +131,14 @@
    "fieldname": "request_id",
    "fieldtype": "Data",
    "label": "Request ID",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_callback",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Callback",
    "read_only": 1
   }
  ],
