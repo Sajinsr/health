@@ -23,7 +23,9 @@
   "transaction_id",
   "request_id",
   "token",
-  "is_callback"
+  "is_callback",
+  "otp",
+  "otp_reference"
  ],
  "fields": [
   {
@@ -140,13 +142,25 @@
    "in_standard_filter": 1,
    "label": "Is Callback",
    "read_only": 1
+  },
+  {
+   "fieldname": "otp",
+   "fieldtype": "Data",
+   "label": "OTP",
+   "read_only": 1
+  },
+  {
+   "fieldname": "otp_reference",
+   "fieldtype": "Data",
+   "label": "OTP Reference",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-07 14:57:14.101912",
+ "modified": "2025-10-16 15:19:13.040752",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Request",

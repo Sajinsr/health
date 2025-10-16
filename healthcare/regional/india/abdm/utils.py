@@ -5,6 +5,7 @@ from datetime import datetime
 import requests
 
 import frappe
+from frappe.core.doctype.sms_settings.sms_settings import send_sms
 from frappe.utils import add_to_date, format_date, getdate, now
 
 from healthcare.regional.india.abdm.abdm_config import get_url
@@ -227,7 +228,14 @@ def generate_unique_id():
 
 
 def request_and_post(
-	url=None, payload=None, headers=None, method="POST", request_name=None, patient=None
+	url=None,
+	payload=None,
+	headers=None,
+	method="POST",
+	request_name=None,
+	patient=None,
+	otp=None,
+	otp_reference=None,
 ):
 	req = frappe.new_doc("ABDM Request")
 	req.request = json.dumps(payload, indent=4)
@@ -235,6 +243,8 @@ def request_and_post(
 	req.request_name = request_name
 	req.header = json.dumps(headers, indent=4)
 	req.request_id = headers.get("headers") or None
+	req.otp = otp
+	req.otp_reference = otp_reference
 
 	try:
 		response = requests.request(
@@ -616,27 +626,33 @@ def link_carecontext(doctype=None, docname=None):
 # User Initiated Linking
 @frappe.whitelist()
 def on_discover(abha_address=None, transaction_id=None, request_id=None):
+	"""Send unlinked care context discovery details to ABDM (HIP → CM)."""
+
 	settings = get_abdm_settings()
 
-	if not settings.consent_base_url:
+	if not settings or not settings.consent_base_url:
 		frappe.throw(
 			title="Not Configured",
 			msg="Consent Management Base URL not configured in ABDM Settings!",
 		)
 
 	token = get_token_for_hiecm()
-	config = get_url("on_discover")
+	if not token or not token.get("accessToken"):
+		frappe.throw("Unable to fetch valid access token for HIE-CM.")
 
-	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
-		"accessToken"
-	)
-	url = settings.consent_base_url + config.get("url")
+	config = get_url("on_discover")
+	url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+	auth_prefix = "Bearer " if token.get("tokenType", "").lower() == "bearer" else ""
+	authorization = auth_prefix + token.get("accessToken")
+
 	payload = {
 		"transactionId": transaction_id,
 		"patient": get_patient_details(abha_address),
 		"matchedBy": ["MR"],
 		"response": {"requestId": request_id},
 	}
+
 	headers = {
 		"Content-Type": "application/json",
 		"REQUEST-ID": generate_unique_id(),
@@ -646,43 +662,139 @@ def on_discover(abha_address=None, transaction_id=None, request_id=None):
 	}
 
 	try:
-		request_and_post(url, payload, headers, config.get("method"), "Process On-discover Request")
+		request_and_post(
+			url=url,
+			payload=payload,
+			headers=headers,
+			method=config.get("method"),
+			request_name="User-Initiated On-Discover Request",
+		)
 	except Exception as e:
-		frappe.log_error(message=e, title="Failed to Process On-discover Request")
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title="Failed to Process ABDM On-Discover Request",
+		)
+		raise e
 
 
 @frappe.whitelist()
 def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
-	settings = get_abdm_settings()
+	"""
+	Processes ABDM On-Init API call after the init callback.
+	Generates link-reference-number, triggers OTP to patient,
+	and sends the response back to Consent Manager.
+	"""
 
-	if not settings.consent_base_url:
-		frappe.throw(
-			title="Not Configured",
-			msg="Consent Management Base URL not configured in ABDM Settings!",
+	try:
+		# Validate required parameters
+		if not (abha_address and transaction_id and request_id):
+			frappe.throw("abha_address, transaction_id, and request_id are required for on_init.")
+
+		settings = get_abdm_settings()
+		if not settings or not settings.consent_base_url:
+			frappe.throw(
+				title="Not Configured",
+				msg="Consent Management Base URL not configured in ABDM Settings!",
+			)
+
+		token = get_token_for_hiecm()
+		if not token or not token.get("accessToken"):
+			frappe.throw("Unable to fetch valid access token for HIE-CM.")
+
+		config = get_url("on_init")
+		url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+		auth_prefix = "Bearer " if token.get("tokenType", "").lower() == "bearer" else ""
+		authorization = auth_prefix + token.get("accessToken")
+
+		otp_expiry = add_to_date(now(), minutes=15)
+
+		payload = {
+			"transactionId": transaction_id,
+			"link": {
+				"referenceNumber": generate_unique_id(),
+				"authenticationType": "DIRECT",
+				"meta": {
+					"communicationMedium": "MOBILE",
+					"communicationHint": "OTP",
+					"communicationExpiry": otp_expiry.replace(" ", "T") + "Z",
+				},
+			},
+			"response": {"requestId": request_id},
+		}
+
+		headers = {
+			"Content-Type": "application/json",
+			"REQUEST-ID": generate_unique_id(),
+			"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+			"X-CM-ID": settings.x_cm_id,
+			"Authorization": authorization,
+		}
+
+		# Send OTP to patient if exists
+		patient = frappe.db.exists("Patient", {"abha_address": abha_address})
+		otp = generate_otp()
+		if patient:
+			mobile_no = frappe.db.get_value("Patient", patient, "mobile")
+			message = f"OTP to link your ABHA details is {otp}. This One Time Password will be valid for 10 mins. { settings.facility_name }"
+			if mobile_no:
+				send_sms(mobile_no, message)
+
+		request_and_post(
+			url,
+			payload,
+			headers,
+			config.get("method"),
+			"Process On-Init Request",
+			patient,
+			otp,
+			payload.link.referenceNumber,
 		)
 
-	token = get_token_for_hiecm()
-	config = get_url("on_init")
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="On-Init Processing Failed")
+		raise e
 
-	authorization = ("Bearer " if token.get("tokenType") == "bearer" else "") + token.get(
-		"accessToken"
-	)
-	url = settings.consent_base_url + config.get("url")
-	otp_expiry = add_to_date(now(), minutes=15)
-	payload = {
-		"transactionId": transaction_id,
-		"link": {
-			"referenceNumber": generate_unique_id(),
-			"authenticationType": "DIRECT",
-			"meta": {
-				"communicationMedium": "MOBILE",
-				"communicationHint": "OTP",
-				"communicationExpiry": otp_expiry.replace(" ", "T") + "Z",
-			},
-		},
-		"response": {"requestId": request_id},
-	}
-	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
+
+@frappe.whitelist()
+def on_confirm(token=None, link_ref_number=None, request_id=None):
+	"""
+	Send care-context confirmation result to ABDM Consent Manager (CM).
+	"""
+
+	settings = get_abdm_settings()
+	if not settings or not settings.consent_base_url:
+		frappe.throw(
+			title="Configuration Missing",
+			msg="Consent Management Base URL not configured in ABDM Settings.",
+		)
+
+	auth_token = get_token_for_hiecm()
+	if not auth_token or not auth_token.get("accessToken"):
+		frappe.throw("Unable to fetch valid access token for HIE-CM.")
+
+	config = get_url("on_confirm")
+	url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+	auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""
+	authorization = auth_prefix + auth_token.get("accessToken")
+
+	otp_request = validate_otp(token, link_ref_number)
+	if not otp_request:
+		payload = {
+			{
+				"code": "ABDM-9999",
+				"message": "Invalid Reference Number / Token",
+			}
+		}
+	else:
+		patient = frappe.db.get_value("ABDM Request", otp_request, "patient")
+		abha_address = frappe.db.get_value("Patient", patient, "abha_address")
+		payload = {
+			"patient": get_patient_details(abha_address),
+			"response": {"requestId": request_id},
+		}
+
 	headers = {
 		"Content-Type": "application/json",
 		"REQUEST-ID": generate_unique_id(),
@@ -692,27 +804,44 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 	}
 
 	try:
-		response = request_and_post(
-			url, payload, headers, config.get("method"), "Process On-discover Request"
+		request_and_post(
+			url=url,
+			payload=payload,
+			headers=headers,
+			method=config.get("method"),
+			log_title="User-Initiated On-Confirm Request",
 		)
-		send_sms(patient)
-		return response
 	except Exception as e:
-		frappe.log_error(message=e, title="Failed to Process On-discover Request")
+		frappe.log_error(
+			message=frappe.get_traceback(), title="Failed to Process ABDM On-Confirm Request"
+		)
+		raise e
+
+
+def validate_otp(token, otp_reference):
+	otp_verified = frappe.db.exists("ABDM Request", {"otp": token, "otp_reference": otp_reference})
+
+	if not otp_verified:
+		return False
+
+	return otp_verified
 
 
 def get_patient_details(abha_address=None):
+	"""
+	Return care context details for the given ABHA address.
+	HI types: Prescription, DiagnosticReport, OPConsultation, DischargeSummary, ImmunizationRecord, HealthDocumentRecord, WellnessRecord, Invoice
+	"""
+
 	if not abha_address:
-		return
+		return []
 
 	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
 
 	if not patient:
-		return
+		return []
 
-	details = []
-	"""HItypes: Prescription,DiagnosticReport,OPConsultation,DischargeSummary,ImmunizationRecord,HealthDocumentRecord,WellnessRecord,Invoice"""
-
+	# Map doctypes to ABDM HI types
 	doctype_map = {
 		"Patient Encounter": "OPConsultation",
 		"Medication Request": "Prescription",
@@ -723,31 +852,37 @@ def get_patient_details(abha_address=None):
 		"Sales Invoice": "Invoice",
 	}
 
-	for i in doctype_map:
+	details = []
+
+	for doctype, hi_type in doctype_map.items():
+		# records = frappe.db.get_all("FHIR Resource", filters={"patient": patient, "doctype": doctype}, fields=["*"])
 		records = frappe.db.get_all(
-			i, filters={"patient": patient, "docstatus": ["!=", 2]}, fields=["*"]
+			doctype,
+			filters={"patient": patient, "docstatus": ["!=", 2]},
+			fields=["name", "patient_name"],
+			order_by="modified desc",
 		)
-		# records = frappe.db.get_all("FHIR Resource", filters={"patient": patient, "doctype": i}, fields=["*"])
 
-		carecontexts = []
-		for rec in records:
-			carecontexts.append(
-				{
-					"referenceNumber": rec.name,
-					"display": f"{rec.name}/{i}/{rec.patient_name}",
-				}
-			)
+		if not records:
+			continue
 
-		if len(carecontexts):
-			details.append(
-				{
-					"referenceNumber": patient,
-					"display": f"Record of {doctype_map[i]}",
-					"careContexts": carecontexts,
-					"hiType": doctype_map[i],
-					"count": len(carecontexts),
-				}
-			)
+		carecontexts = [
+			{
+				"referenceNumber": rec.name,
+				"display": f"{doctype}/{rec.name}/{rec.patient_name}",
+			}
+			for rec in records
+		]
+
+		details.append(
+			{
+				"referenceNumber": patient,
+				"display": f"{hi_type} Records",
+				"careContexts": carecontexts,
+				"hiType": hi_type,
+				"count": len(carecontexts),
+			}
+		)
 
 	return details
 
@@ -761,13 +896,19 @@ def get_carecontext(doc):
 		display = f"OPD Record-{format_date(doc.encounter_date, 'dd-mm-yyyy')}-{doc.name}"
 		hitype = "OPConsultation"
 		carecontext.append(
-			{"referenceNumber": doc.name, "display": f"{doc.appointment_type} with {doc.practitioner_name}"}
+			{
+				"referenceNumber": doc.name,
+				"display": f"{doc.appointment_type} with {doc.practitioner_name}",
+			}
 		)
 	if doc.doctype == "Medication Request":
 		display = f"Medication Request-{format_date(doc.order_date, 'dd-mm-yyyy')}-{doc.name}"
 		hitype = "Prescription"
 		carecontext.append(
-			{"referenceNumber": doc.name, "display": f"{doc.medication} ordered by {doc.practitioner_name}"}
+			{
+				"referenceNumber": doc.name,
+				"display": f"{doc.medication} ordered by {doc.practitioner_name}",
+			}
 		)
 		# if doc.drug_prescription:
 		# 	for i in doc.drug_prescription:
@@ -830,7 +971,10 @@ def post_abdm_request(**args):
 			patient = frappe.db.exists("Patient", {"abha_address": args.get("abha_address")})
 			if patient:
 				req.patient = patient
-		if args.get("notification") and args.get("notification").get("status") in ["GRANTED", "SUCCESS"]:
+		if args.get("notification") and args.get("notification").get("status") in [
+			"GRANTED",
+			"SUCCESS",
+		]:
 			req.status = "Revoked"
 		if args.get("error"):
 			message = frappe._dict(args.get("error")).get("message")
@@ -846,7 +990,7 @@ def post_abdm_request(**args):
 		req.insert(ignore_permissions=True)
 
 
-def send_sms(patient):
+def send_sms_notify(patient):
 	if not patient:
 		return
 
@@ -901,3 +1045,15 @@ def send_sms(patient):
 		return response
 	except Exception as e:
 		frappe.log_error(message=e, title="Failed to Process On-Notify Request")
+
+
+def generate_otp(length=6):
+	"""
+	Generates a numeric OTP of given length (default 6 digits)
+	"""
+
+	import secrets
+
+	digits = "0123456789"
+	otp = "".join(secrets.choice(digits) for _ in range(length))
+	return otp
