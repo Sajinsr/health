@@ -2,7 +2,7 @@ import json
 
 import frappe
 
-from healthcare.regional.india.abdm.utils import post_abdm_request, send_sms
+from healthcare.regional.india.abdm.utils import post_abdm_request, send_sms_notify
 
 
 @frappe.whitelist(allow_guest=True)
@@ -25,6 +25,6 @@ def on_carecontext():
 		if frappe.local.response["http_status_code"] == 200:
 			patient = frappe.db.exists("Patient", {"abha_address": args.get("abha_address")})
 			if patient:
-				send_sms(patient)
+				send_sms_notify(patient)
 
 	return {"status": "success", "received": data, "status_code": 200}
