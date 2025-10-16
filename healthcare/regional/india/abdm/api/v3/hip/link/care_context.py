@@ -3,103 +3,156 @@ import json
 import frappe
 from frappe.utils import now_datetime
 
-from healthcare.regional.india.abdm.utils import on_init, post_abdm_request
+from healthcare.regional.india.abdm.utils import on_confirm, on_init, post_abdm_request
 
 
 @frappe.whitelist(allow_guest=True)
 def init():
-	data = json.loads(frappe.request.data)
-	if data:
-		transaction_id = data.get("transactionId")
-		request_id = frappe.request.headers.get("request-id")
-		hip_id = frappe.request.headers.get("x-hip-id")
-		exists = frappe.db.exists("ABDM Settings", {"facility_id": hip_id})
-		# if not exists:
-		# 	return {
-		# 		"timestamp": str(now_datetime()),
-		# 		"path": "/api/v3/hiecm/user-initiated-linking/patient/care-context/discover",
-		# 		"status_code": 500,
-		# 		"error": "X-HIP-ID is invalid, Please try again with correct X-HIP-ID",
-		# 		"requestId": request_id,
-		# 	}
-		abha_address = None
-		if data.get("abhaAddress"):
-			abha_address = data.get("abhaAddress")
-		args = {
-			"path": frappe.request.path,
-			"headers": frappe.as_json(frappe.request.headers, indent=2),
-			"request_name": "Callback of User Initated Init",
-			"abha_address": abha_address,
-			"error": data.get("error"),
-			"notification": data.get("notification"),
-			"transaction_id": data.get("transactionId"),
-			"company": frappe.get_cached_value("ABDM Settings", exists, "company") if exists else None,
-			"request_id": request_id,
-			"data": data,
-			"is_callback": True,
-		}
-		post_abdm_request(**args)
-		response_message = {"status": "success", "received": data, "status_code": 202}
+	"""Handles ABDM User-Initiated Linking (Care Context Init Callback)"""
 
-		if abha_address and transaction_id and request_id:
+	try:
+		data = json.loads(frappe.request.data or "{}")
+		request_id = frappe.request.headers.get("REQUEST-ID") or frappe.request.headers.get("request-id")
+		hip_id = frappe.request.headers.get("X-HIP-ID") or frappe.request.headers.get("x-hip-id")
+		timestamp = frappe.request.headers.get("TIMESTAMP")
+		transaction_id = data.get("transactionId")
+		abha_address = data.get("abhaAddress")
+
+		# Validate required headers
+		if not (request_id and hip_id and timestamp and transaction_id):
+			return error_response(
+				request_id,
+				"Missing required headers or transactionId",
+				status_code=400,
+			)
+
+		# Validate HIP registration
+		abdm_settings = frappe.db.exists("ABDM Settings", {"facility_id": hip_id})
+		if not abdm_settings:
+			return error_response(
+				request_id,
+				"Invalid X-HIP-ID. Please verify facility registration.",
+				status_code=403,
+			)
+
+		post_abdm_request(
+			path=frappe.request.path,
+			headers=frappe.as_json(dict(frappe.request.headers), indent=2),
+			request_name="Callback of User-Initiated Linking - Init",
+			abha_address=abha_address,
+			error=data.get("error"),
+			notification=data.get("notification"),
+			transaction_id=transaction_id,
+			company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
+			request_id=request_id,
+			data=data,
+			is_callback=True,
+		)
+
+		# Process on-init call
+		if abha_address:
 			try:
 				on_init(abha_address, transaction_id, request_id, data)
+				return success_response(request_id, data, "/api/v3/hip/link/care-context/init")
 			except Exception as e:
-				response_message = {
-					"timestamp": str(now_datetime()),
-					"path": "/api/hiecm/user-initiated-linking/v3/link/care-context/on-init",
-					"status_code": 500,
-					"error": e,
-					"requestId": request_id,
-				}
-				frappe.log_error(message=e, title="Failed to process on-init")
+				frappe.log_error(message=frappe.get_traceback(), title="On-Init Processing Failed")
+				return error_response(
+					request_id, str(e), status_code=500, path="/api/v3/hip/link/care-context/init"
+				)
 		else:
-			response_message = {
-				"timestamp": now_datetime(),
-				"path": "/api/hiecm/user-initiated-linking/v3/link/care-context/on-init",
-				"status_code": 500,
-				"error": "Need transaction id and request id to process the on-init request",
-				"requestId": request_id,
-			}
+			return error_response(
+				request_id,
+				"Missing ABHA address in init request.",
+				status_code=400,
+				path="/api/v3/hip/link/care-context/init",
+			)
 
-		return response_message
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="Init Callback Processing Error")
+		return error_response(None, str(e), status_code=500, path="/api/v3/hip/link/care-context/init")
 
 
 @frappe.whitelist(allow_guest=True)
 def confirm():
-	data = json.loads(frappe.request.data)
-	# if data:
-	# 	transaction_id = data.get("transactionId")
-	# 	request_id = frappe.request.headers.get("request-id")
-	# 	abha_address = None
-	# 	if data.get("abhaAddress"):
-	# 		abha_address = data.get("abhaAddress")
-	# 	args = {
-	# 		"path": frappe.request.path,
-	# 		"headers": frappe.as_json(frappe.request.headers, indent=2),
-	# 		"request_name": "Callback of User Initated Init",
-	# 		"abha_address": abha_address,
-	# 		"error": data.get("error"),
-	# 		"notification": data.get("notification"),
-	# 		"transaction_id": data.get("transactionId"),
-	# 		"data": data,
-	# 		"is_callback": True,
-	# 	}
-	# 	post_abdm_request(**args)
-	# 	response_message = {"status": "success", "received": data, "status_code": 202}
+	"""
+	HIP Callback endpoint to confirm care-context linking for a patient.
+	Receives token and linkRefNumber and triggers on-confirm process.
+	"""
+	try:
+		data = json.loads(frappe.request.data or "{}")
+		request_id = frappe.request.headers.get("REQUEST-ID")
+		hip_id = frappe.request.headers.get("X-HIP-ID")
+		timestamp = frappe.request.headers.get("TIMESTAMP")
 
-	# 	if abha_address and transaction_id and request_id:
-	# 		try:
-	# 			on_init(abha_address, transaction_id, request_id)
-	# 		except Exception as e:
-	# 			frappe.log_error(message=e, title="Failed to process on-init")
-	# 	else:
-	# 		response_message = {
-	# 			"timestamp": now_datetime(),
-	# 			"path": "/api/hiecm/user-initiated-linking/v3/link/care-context/on-init",
-	# 			"status_code": 500,
-	# 			"error": "Need transaction id and request id to process the on-init request",
-	# 			"requestId": request_id,
-	# 		}
+		if not (request_id and hip_id and timestamp):
+			return error_response(
+				request_id, "Missing required headers", 400, "/api/v3/hip/link/care-context/confirm"
+			)
 
-	# 	return response_message
+		# Validate HIP registration
+		abdm_settings = frappe.db.exists("ABDM Settings", {"facility_id": hip_id})
+		if not abdm_settings:
+			return error_response(
+				request_id,
+				"Invalid X-HIP-ID. Please verify facility registration.",
+				403,
+				"/api/v3/hip/link/care-context/confirm",
+			)
+
+		# Validate request body
+		confirmation = data.get("confirmation")
+		if not confirmation or not confirmation.get("token") or not confirmation.get("linkRefNumber"):
+			return error_response(
+				request_id,
+				"Missing token or linkRefNumber in confirmation",
+				400,
+				"/api/v3/hip/link/care-context/confirm",
+			)
+
+		post_abdm_request(
+			path=frappe.request.path,
+			headers=frappe.as_json(dict(frappe.request.headers), indent=2),
+			request_name="Callback of User-Initiated Linking - Confirm",
+			company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
+			request_id=request_id,
+			data=data,
+			is_callback=True,
+		)
+
+		try:
+			on_confirm(
+				token=confirmation.get("token"),
+				link_ref_number=confirmation.get("linkRefNumber"),
+				request_id=request_id,
+			)
+			return success_response(request_id, data, "/api/v3/hip/link/care-context/confirm")
+		except Exception as e:
+			frappe.log_error(message=frappe.get_traceback(), title="On-Confirm Processing Failed")
+			return error_response(request_id, str(e), 500, "/api/v3/hip/link/care-context/confirm")
+
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="Confirm Callback Processing Error")
+		return error_response(None, str(e), 500, "/api/v3/hip/link/care-context/confirm")
+
+
+def success_response(request_id, received_data, path):
+	return {
+		"timestamp": str(now_datetime()),
+		"path": path,
+		"status": "success",
+		"status_code": 202,
+		"requestId": request_id,
+		"message": "Init callback processed successfully.",
+		"received": received_data,
+	}
+
+
+def error_response(request_id, error_message, status_code=500, path=None):
+	return {
+		"timestamp": str(now_datetime()),
+		"path": path,
+		"status": "failed",
+		"status_code": status_code,
+		"error": error_message,
+		"requestId": request_id,
+	}
