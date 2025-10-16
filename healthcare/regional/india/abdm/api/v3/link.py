@@ -11,7 +11,7 @@ def on_carecontext():
 	if data:
 		args = {
 			"path": frappe.request.path,
-			"headers": json.dumps(frappe.request.headers, indent=2),
+			"headers": frappe.as_json(frappe.request.headers, indent=2),
 			"request_name": "Callback of HIP Link Carecontext",
 			"abha_address": data.get("abhaAddress"),
 			"error": data.get("error"),

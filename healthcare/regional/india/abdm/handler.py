@@ -16,7 +16,7 @@ class ABDMRequestValidator:
 
 	def __init__(self, payload):
 		self.payload = payload
-		self.response = payload.get("response") or False
+		self.response = payload.get("response") or {}
 
 	def has_valid_request_id(self):
 		return bool(self.response.get("requestId"))
@@ -88,7 +88,7 @@ class AbdmHandler(BaseRenderer):
 
 	def _process_callback(self, callback_path, validator):
 		"""Core logic for handling various ABDM callback scenarios."""
-		if not isinstance(validator.payload.get("response"), dict):
+		if not isinstance(validator.payload, dict):
 			raise ABDMCallbackError("Invalid response format in payload.")
 
 		# Case 1: Request ID based callback
