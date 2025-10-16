@@ -22,7 +22,8 @@
   "section_break_yowv",
   "transaction_id",
   "request_id",
-  "token"
+  "token",
+  "is_callback"
  ],
  "fields": [
   {
@@ -131,13 +132,21 @@
    "fieldtype": "Data",
    "label": "Request ID",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_callback",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Callback",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-10 16:18:42.627820",
+ "modified": "2025-10-07 14:57:14.101912",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Request",
