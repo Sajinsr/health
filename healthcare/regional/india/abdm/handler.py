@@ -16,9 +16,10 @@ class ABDMRequestValidator:
 
 	def __init__(self, payload):
 		self.payload = payload
+		self.response = payload.get("response") or False
 
 	def has_valid_request_id(self):
-		return bool(self.payload.get("requestId"))
+		return bool(self.response.get("requestId"))
 
 	def has_valid_transaction_id(self):
 		return bool(self.payload.get("transactionId"))
@@ -31,7 +32,7 @@ class ABDMRequestValidator:
 		"""Check if request ID exists and is granted."""
 		return frappe.db.exists(
 			"ABDM Request",
-			{"request_id": self.payload.get("requestId"), "status": "Granted"},
+			{"request_id": self.response.get("requestId"), "status": "Granted"},
 		)
 
 
