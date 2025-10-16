@@ -859,7 +859,7 @@ def get_patient_details(abha_address=None):
 		records = frappe.db.get_all(
 			doctype,
 			filters={"patient": patient, "docstatus": ["!=", 2]},
-			fields=["name", "patient_name"],
+			fields=["*"],
 			order_by="modified desc",
 		)
 
@@ -869,7 +869,7 @@ def get_patient_details(abha_address=None):
 		carecontexts = [
 			{
 				"referenceNumber": rec.name,
-				"display": f"{doctype}/{rec.name}/{rec.patient_name}",
+				"display": f"{doctype}/{rec.name}/{rec.patient}",
 			}
 			for rec in records
 		]

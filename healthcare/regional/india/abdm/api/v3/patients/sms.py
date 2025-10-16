@@ -11,7 +11,7 @@ def on_notify():
 	if data:
 		args = {
 			"path": frappe.request.path,
-			"headers": json.dumps(frappe.request.headers, indent=2),
+			"headers": frappe.as_json(frappe.request.headers, indent=2),
 			"request_name": "Callback of SMS Notify",
 			"error": data.get("error"),
 			"notification": data.acknowledgement.get("status") if data.get("acknowledgement") else None,
