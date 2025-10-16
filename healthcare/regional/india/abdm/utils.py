@@ -263,7 +263,7 @@ def request_and_post(
 		except Exception as e:
 			response = response.text
 
-		if isinstance(response, dict):
+		if isinstance(response, dict) or isinstance(response, list):
 			req.response = json.dumps(response, indent=4)
 		else:
 			req.response = response
@@ -682,7 +682,6 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 		"response": {"requestId": request_id},
 	}
 	patient = frappe.db.exists("Patient", {"abha_address": abha_address})
-	mobile_no = ""  # get_patient_mobile_number(patient, transaction_id)
 	headers = {
 		"Content-Type": "application/json",
 		"REQUEST-ID": generate_unique_id(),
@@ -695,7 +694,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 		response = request_and_post(
 			url, payload, headers, config.get("method"), "Process On-discover Request"
 		)
-		# send_sms(patient, mobile_no)
+		send_sms(patient)
 		return response
 	except Exception as e:
 		frappe.log_error(message=e, title="Failed to Process On-discover Request")
@@ -829,7 +828,7 @@ def post_abdm_request(**args):
 			patient = frappe.db.exists("Patient", {"abha_address": args.get("abha_address")})
 			if patient:
 				req.patient = patient
-		if args.get("notification") and args.get("notification").get("status") != "GRANTED":
+		if args.get("notification") and args.get("notification").get("status") in ["GRANTED", "SUCCESS"]:
 			req.status = "Revoked"
 		if args.get("error"):
 			message = frappe._dict(args.get("error")).get("message")
@@ -845,8 +844,19 @@ def post_abdm_request(**args):
 		req.insert(ignore_permissions=True)
 
 
-def send_sms(patient, mobile_no):
+def send_sms(patient):
 	if not patient:
+		return
+
+	mobile_no = frappe.db.get_value("Patient", patient, "mobile")
+
+	if not mobile_no:
+		frappe.msgprint(
+			title="Not Configured",
+			msg="Please add mobile number to send sms",
+			indicator="red",
+			alert=True,
+		)
 		return
 
 	settings = get_abdm_settings()
@@ -865,9 +875,13 @@ def send_sms(patient, mobile_no):
 	)
 	url = settings.consent_base_url + config.get("url")
 	payload = {
-		"requestId": generate_unique_id(),
-		"timestamp": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
-		"notification": {"phoneNo": mobile_no, "hip": {"name": "ess-hip", "id": "ess-hip"}},
+		"notification": {
+			"phoneNo": mobile_no,
+			"hip": {
+				"name": settings.facility_name,
+				"id": settings.facility_id,
+			},
+		},
 	}
 
 	headers = {
