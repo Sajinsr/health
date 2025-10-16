@@ -26,7 +26,10 @@ class ABDMRequestValidator:
 
 	def is_duplicate_transaction(self):
 		"""Check if the transaction ID already exists."""
-		return frappe.db.exists("ABDM Request", {"transaction_id": self.payload.get("transactionId")})
+		return frappe.db.exists(
+			"ABDM Request",
+			{"transaction_id": self.payload.get("transactionId"), "url": frappe.request.path},
+		)
 
 	def is_granted_request(self):
 		"""Check if request ID exists and is granted."""
