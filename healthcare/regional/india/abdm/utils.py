@@ -6,7 +6,7 @@ import requests
 
 import frappe
 from frappe.core.doctype.sms_settings.sms_settings import send_sms
-from frappe.utils import add_to_date, format_date, getdate, now
+from frappe.utils import add_to_date, format_date, format_datetime, getdate, now
 
 from healthcare.regional.india.abdm.abdm_config import get_url
 
@@ -718,7 +718,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 				"meta": {
 					"communicationMedium": "MOBILE",
 					"communicationHint": "OTP",
-					"communicationExpiry": otp_expiry.replace(" ", "T") + "Z",
+					"communicationExpiry": format_datetime(otp_expiry, "yyyy-MM-ddTHH:mm:ss.SSS'Z'"),
 				},
 			},
 			"response": {"requestId": request_id},
