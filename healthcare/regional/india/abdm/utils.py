@@ -708,11 +708,12 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 		authorization = auth_prefix + token.get("accessToken")
 
 		otp_expiry = add_to_date(now(), minutes=15)
+		reference_number = generate_unique_id()
 
 		payload = {
 			"transactionId": transaction_id,
 			"link": {
-				"referenceNumber": generate_unique_id(),
+				"referenceNumber": reference_number,
 				"authenticationType": "DIRECT",
 				"meta": {
 					"communicationMedium": "MOBILE",
@@ -754,7 +755,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 			"Process On-Init Request",
 			patient,
 			otp,
-			payload.link.referenceNumber,
+			reference_number,
 		)
 
 	except Exception as e:
