@@ -738,7 +738,13 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 			mobile_no = frappe.db.get_value("Patient", patient, "mobile")
 			message = f"OTP to link your ABHA details is {otp}. This One Time Password will be valid for 10 mins. { settings.facility_name }"
 			if mobile_no:
-				send_sms(mobile_no, message)
+				if frappe.get_single_value("SMS Settings", "sms_gateway_url"):
+					send_sms(mobile_no, message)
+				else:
+					frappe.log_error(
+						message=f"Trying to send OTP to {mobile_no}.\nMessage:\n{message}",
+						title="SMS not configured",
+					)
 
 		request_and_post(
 			url,
