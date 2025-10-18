@@ -752,7 +752,7 @@ def on_init(abha_address=None, transaction_id=None, request_id=None, data=None):
 			payload,
 			headers,
 			config.get("method"),
-			"Process On-Init Request",
+			"User-Initiated On-Init Request",
 			patient,
 			otp,
 			reference_number,
@@ -982,7 +982,7 @@ def post_abdm_request(**args):
 			"GRANTED",
 			"SUCCESS",
 		]:
-			req.status = "Revoked"
+			req.status = "Granted"
 		if args.get("error"):
 			message = frappe._dict(args.get("error")).get("message")
 			req.status = "Revoked"
