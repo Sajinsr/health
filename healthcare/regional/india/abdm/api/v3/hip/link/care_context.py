@@ -80,8 +80,8 @@ def confirm():
 	"""
 	try:
 		data = json.loads(frappe.request.data or "{}")
-		request_id = frappe.request.headers.get("REQUEST-ID")
-		hip_id = frappe.request.headers.get("X-HIP-ID")
+		request_id = frappe.request.headers.get("REQUEST-ID") or frappe.request.headers.get("request-id")
+		hip_id = frappe.request.headers.get("X-HIP-ID") or frappe.request.headers.get("x-hip-id")
 		timestamp = frappe.request.headers.get("TIMESTAMP")
 
 		if not (request_id and hip_id and timestamp):
@@ -113,8 +113,10 @@ def confirm():
 			path=frappe.request.path,
 			headers=frappe.as_json(dict(frappe.request.headers), indent=2),
 			request_name="Callback of User-Initiated Linking - Confirm",
+			error=data.get("error"),
 			company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
 			request_id=request_id,
+			notification="SUCCESS" if confirmation else None,
 			data=data,
 			is_callback=True,
 		)
