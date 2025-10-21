@@ -35,6 +35,10 @@ class ABDMRequestValidator:
 			{"request_id": self.response.get("requestId"), "status": "Granted"},
 		)
 
+	def is_confirmation_request(self):
+		"""Check if the request is a OTP confirmation request"""
+		return bool(self.payload.get("confirmation"))
+
 
 class AbdmHandler(BaseRenderer):
 	"""Custom renderer for handling ABDM callback routes."""
@@ -104,7 +108,11 @@ class AbdmHandler(BaseRenderer):
 				return self._error("Duplicate transaction request.", 400)
 			return self._get_method_response(callback_path)
 
-		# Case 3: Unknown payload format
+		# Case 3: Confirmation request
+		elif validator.is_confirmation_request():
+			return self._get_method_response(callback_path)
+
+		# Case 4: Unknown payload format
 		else:
 			raise ABDMCallbackError("Missing both requestId and transactionId in payload.")
 
