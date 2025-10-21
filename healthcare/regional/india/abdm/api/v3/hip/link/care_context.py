@@ -109,6 +109,8 @@ def confirm():
 				"/api/v3/hip/link/care-context/confirm",
 			)
 
+		notification = {"status": "SUCCESS"}
+
 		post_abdm_request(
 			path=frappe.request.path,
 			headers=frappe.as_json(dict(frappe.request.headers), indent=2),
@@ -116,7 +118,7 @@ def confirm():
 			error=data.get("error"),
 			company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
 			request_id=request_id,
-			notification="SUCCESS" if confirmation else None,
+			notification=notification,
 			data=data,
 			is_callback=True,
 		)
