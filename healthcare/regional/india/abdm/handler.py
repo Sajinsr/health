@@ -57,6 +57,11 @@ class AbdmHandler(BaseRenderer):
 
 	def render(self):
 		try:
+			# test
+			frappe.log_error(
+				message=f"PATH: {frappe.request.path}\nHEADERS: {frappe.request.headers}\nPAYLOAD: {json.dumps(self._get_request_payload(), indent=2)}",
+				title="ABDM Callback Headers",
+			)
 			if frappe.request.method != "POST":
 				return self._build_success_response({}, 200)
 

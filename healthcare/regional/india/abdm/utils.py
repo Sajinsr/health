@@ -245,6 +245,7 @@ def request_and_post(
 	req.request_id = headers.get("headers") or None
 	req.otp = otp
 	req.otp_reference = otp_reference
+	req.patient = patient
 
 	try:
 		response = requests.request(
@@ -795,10 +796,31 @@ def on_confirm(token=None, link_ref_number=None, request_id=None):
 			}
 		}
 	else:
-		patient = frappe.db.get_value("ABDM Request", otp_request, "patient")
-		abha_address = frappe.db.get_value("Patient", patient, "abha_address")
+		otp_request_doc = frappe.get_doc("ABDM Request", otp_request)
+		request_headers = json.loads(otp_request_doc.request or "{}")
+		transaction_id = request_headers.get("transactionId")
+
+		patient_details = []
+		if transaction_id:
+			init_request = frappe.db.exists(
+				"ABDM Request",
+				{
+					"transaction_id": transaction_id,
+					"url": "/abdm/callback/api/v3/hip/link/care-context/init",
+					"patient": otp_request_doc.patient,
+				},
+			)
+
+			if init_request:
+				init_response = frappe.db.get_value("ABDM Request", init_request, "response")
+				response_data = json.loads(init_response or "{}")
+				patient_details = build_care_context_details(response_data.get("patient")) or []
+
+				# test
+				frappe.log_error(message=f"{patient_details}", title="Carecontext details")
+
 		payload = {
-			"patient": get_patient_details(abha_address),
+			"patient": patient_details,
 			"response": {"requestId": request_id},
 		}
 
@@ -888,6 +910,51 @@ def get_patient_details(abha_address=None):
 				"careContexts": carecontexts,
 				"hiType": hi_type,
 				"count": len(carecontexts),
+			}
+		)
+
+	return details
+
+
+def build_care_context_details(data):
+	"""
+	Transform minimal care context data into detailed ABDM-compliant structure.
+	Format matches the output of get_patient_details().
+	"""
+
+	doctype_map = {
+		"OPConsultation": "Patient Encounter",
+		"Prescription": "Medication Request",
+		"WellnessRecord": "Therapy Session",
+		"DiagnosticReport": "Diagnostic Report",
+		"DischargeSummary": "Discharge Summary",
+		"HealthDocumentRecord": "Patient Medical Record",
+		"Invoice": "Sales Invoice",
+	}
+
+	details = []
+
+	for item in data:
+		patient_ref = item.get("referenceNumber")
+		hi_type = item.get("hiType")
+		care_contexts = item.get("careContexts", [])
+
+		enriched_contexts = [
+			{
+				"referenceNumber": cc.get("referenceNumber"),
+				"display": f"{doctype_map.get(hi_type)}/{cc.get('referenceNumber')}/{patient_ref}",
+			}
+			for cc in care_contexts
+			if cc.get("referenceNumber")
+		]
+
+		details.append(
+			{
+				"referenceNumber": patient_ref,
+				"display": f"{hi_type} Records",
+				"careContexts": enriched_contexts,
+				"hiType": hi_type,
+				"count": len(enriched_contexts),
 			}
 		)
 

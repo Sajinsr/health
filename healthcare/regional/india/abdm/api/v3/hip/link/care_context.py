@@ -53,7 +53,12 @@ def init():
 		if abha_address:
 			try:
 				on_init(abha_address, transaction_id, request_id, data)
-				return success_response(request_id, data, "/api/v3/hip/link/care-context/init")
+				return success_response(
+					request_id,
+					data,
+					"/api/v3/hip/link/care-context/init",
+					"Init callback processed successfully.",
+				)
 			except Exception as e:
 				frappe.log_error(message=frappe.get_traceback(), title="On-Init Processing Failed")
 				return error_response(
@@ -111,25 +116,37 @@ def confirm():
 
 		notification = {"status": "SUCCESS"}
 
-		post_abdm_request(
-			path=frappe.request.path,
-			headers=frappe.as_json(dict(frappe.request.headers), indent=2),
-			request_name="Callback of User-Initiated Linking - Confirm",
-			error=data.get("error"),
-			company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
-			request_id=request_id,
-			notification=notification,
-			data=data,
-			is_callback=True,
-		)
+		try:
+			post_abdm_request(
+				path=frappe.request.path,
+				headers=frappe.as_json(dict(frappe.request.headers), indent=2),
+				request_name="Callback of User-Initiated Linking - Confirm",
+				error=data.get("error"),
+				company=frappe.get_cached_value("ABDM Settings", abdm_settings, "company"),
+				request_id=request_id,
+				notification=notification,
+				data=data,
+				is_callback=True,
+			)
+		except Exception as e:
+			frappe.log_error(message=frappe.get_traceback(), title="On-Confirm Processing Failed")
+			return error_response(request_id, str(e), 500, "/api/v3/hip/link/care-context/confirm")
 
 		try:
-			on_confirm(
+			frappe.enqueue(
+				method=on_confirm,
+				queue="default",
 				token=confirmation.get("token"),
 				link_ref_number=confirmation.get("linkRefNumber"),
 				request_id=request_id,
 			)
-			return success_response(request_id, data, "/api/v3/hip/link/care-context/confirm")
+
+			return success_response(
+				request_id,
+				data,
+				"/api/v3/hip/link/care-context/confirm",
+				"Confirm callback processed successfully.",
+			)
 		except Exception as e:
 			frappe.log_error(message=frappe.get_traceback(), title="On-Confirm Processing Failed")
 			return error_response(request_id, str(e), 500, "/api/v3/hip/link/care-context/confirm")
@@ -139,14 +156,14 @@ def confirm():
 		return error_response(None, str(e), 500, "/api/v3/hip/link/care-context/confirm")
 
 
-def success_response(request_id, received_data, path):
+def success_response(request_id, received_data, path, message):
 	return {
 		"timestamp": str(now_datetime()),
 		"path": path,
 		"status": "success",
 		"status_code": 202,
 		"requestId": request_id,
-		"message": "Init callback processed successfully.",
+		"message": message,
 		"received": received_data,
 	}
 
