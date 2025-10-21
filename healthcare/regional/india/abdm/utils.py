@@ -816,7 +816,7 @@ def on_confirm(token=None, link_ref_number=None, request_id=None):
 			payload=payload,
 			headers=headers,
 			method=config.get("method"),
-			log_title="User-Initiated On-Confirm Request",
+			request_name="User-Initiated On-Confirm Request",
 		)
 	except Exception as e:
 		frappe.log_error(
