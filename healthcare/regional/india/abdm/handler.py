@@ -69,7 +69,7 @@ class AbdmHandler(BaseRenderer):
 		try:
 			# test
 			frappe.log_error(
-				message=f"PATH: {frappe.request.path}\nHEADERS: {frappe.request.headers}\nPAYLOAD: {json.dumps(self._get_request_payload(), indent=2)}",
+				message=f"PATH: {frappe.request.path}\nMethode: {frappe.request.method}\nHEADERS: {frappe.request.headers}\nPAYLOAD: {json.dumps(self._get_request_payload(), indent=2)}",
 				title="ABDM Callback Headers",
 			)
 			if frappe.request.method != "POST":
@@ -77,6 +77,12 @@ class AbdmHandler(BaseRenderer):
 
 			payload = self._get_request_payload()
 			callback_path = self.path.removeprefix(self.prefix)
+
+			# test
+			frappe.log_error(
+				message=f"callback_path: {callback_path}",
+				title="ABDM Test Log 1",
+			)
 
 			if not callback_path:
 				return self._build_success_response({}, 200)
