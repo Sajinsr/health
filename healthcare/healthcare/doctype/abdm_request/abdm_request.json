@@ -7,25 +7,35 @@
  "engine": "InnoDB",
  "field_order": [
   "request_name",
-  "request_date",
+  "url",
+  "patient",
   "column_break_3",
   "company",
   "status",
-  "url",
-  "patient",
+  "request_date",
   "section_break_4",
-  "request",
   "header",
   "column_break_6",
+  "request",
+  "response_details_section",
   "response",
+  "column_break_zese",
   "traceback",
+  "more_informations_tab",
   "section_break_yowv",
   "transaction_id",
   "request_id",
-  "token",
   "is_callback",
+  "column_break_duzf",
+  "token",
+  "otp_details_section",
   "otp",
-  "otp_reference"
+  "column_break_tjxa",
+  "otp_reference",
+  "consent_details_section",
+  "consent_id",
+  "column_break_luqy",
+  "data_push_url"
  ],
  "fields": [
   {
@@ -56,7 +66,8 @@
   },
   {
    "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Request Details"
   },
   {
    "fieldname": "request",
@@ -107,7 +118,8 @@
   },
   {
    "fieldname": "section_break_yowv",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Transaction and Token Deatils"
   },
   {
    "fieldname": "token",
@@ -154,6 +166,54 @@
    "fieldtype": "Data",
    "label": "OTP Reference",
    "read_only": 1
+  },
+  {
+   "fieldname": "consent_id",
+   "fieldtype": "Data",
+   "label": "Consent ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_push_url",
+   "fieldtype": "Data",
+   "label": "Data Push URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_duzf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "more_informations_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Informations"
+  },
+  {
+   "fieldname": "otp_details_section",
+   "fieldtype": "Section Break",
+   "label": "OTP Details"
+  },
+  {
+   "fieldname": "column_break_tjxa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "consent_details_section",
+   "fieldtype": "Section Break",
+   "label": "Consent Details"
+  },
+  {
+   "fieldname": "column_break_luqy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "response_details_section",
+   "fieldtype": "Section Break",
+   "label": "Response Details"
+  },
+  {
+   "fieldname": "column_break_zese",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
