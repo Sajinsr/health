@@ -116,6 +116,11 @@ config = {
 		"url": "/api/hiecm/api/hiecm/hip/v3/link/patient/links/sms/notify2",
 		"encrypted": False,
 	},
+	"on_notify": {
+		"method": "POST",
+		"url": "/api/hiecm/consent/v3/request/hip/on-notify",
+		"encrypted": False,
+	},
 }
 
 

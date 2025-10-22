@@ -26,6 +26,7 @@ class ABDMRequestValidator:
 
 	def is_duplicate_transaction(self):
 		"""Check if the transaction ID already exists."""
+
 		return frappe.db.exists(
 			"ABDM Request",
 			{"transaction_id": self.payload.get("transactionId"), "url": frappe.request.path},
@@ -33,6 +34,7 @@ class ABDMRequestValidator:
 
 	def is_granted_request(self):
 		"""Check if request ID exists and is granted."""
+
 		return frappe.db.exists(
 			"ABDM Request",
 			{"request_id": self.response.get("requestId"), "status": "Granted"},
@@ -40,7 +42,15 @@ class ABDMRequestValidator:
 
 	def is_confirmation_request(self):
 		"""Check if the request is a OTP confirmation request"""
+
 		return bool(self.payload.get("confirmation"))
+
+	def is_consent_notify(self):
+		"""Check if the request is a Consent Notify request"""
+
+		notification = self.payload.get("notification") or {}
+
+		return bool(notification.get("consentId") and notification.get("consentDetail"))
 
 
 class AbdmHandler(BaseRenderer):
@@ -120,7 +130,11 @@ class AbdmHandler(BaseRenderer):
 		elif validator.is_confirmation_request():
 			return self._get_method_response(callback_path)
 
-		# Case 4: Unknown payload format
+		# Case 4: Consent notify
+		elif validator.is_consent_notify():
+			return self._get_method_response(callback_path)
+
+		# Case 5: Unknown payload format
 		else:
 			raise ABDMCallbackError("Missing both requestId and transactionId in payload.")
 

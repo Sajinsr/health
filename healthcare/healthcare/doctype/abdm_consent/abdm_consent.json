@@ -1,0 +1,142 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:consent_id",
+ "creation": "2025-10-21 18:19:09.074021",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "consent_id",
+  "x_hip_id",
+  "abha_address",
+  "column_break_smol",
+  "status",
+  "timestamp",
+  "data_push_url",
+  "transaction_id",
+  "section_break_rpki",
+  "consent_detail",
+  "care_contexts",
+  "column_break_yfbg",
+  "payload",
+  "key_material"
+ ],
+ "fields": [
+  {
+   "fieldname": "payload",
+   "fieldtype": "Code",
+   "label": "Payload",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_smol",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "x_hip_id",
+   "fieldtype": "Data",
+   "label": "X-HIP-ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Data",
+   "label": "Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "abha_address",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "ABHA Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_rpki",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_yfbg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "care_contexts",
+   "fieldtype": "Code",
+   "label": "Care Contexts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_push_url",
+   "fieldtype": "Data",
+   "label": "Data Push URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "key_material",
+   "fieldtype": "Code",
+   "label": "Key Material",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "label": "Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Consent ID",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "consent_detail",
+   "fieldtype": "Code",
+   "label": "Consent Detail",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-22 16:55:15.803619",
+ "modified_by": "Administrator",
+ "module": "Healthcare",
+ "name": "ABDM Consent",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "abha_address"
+}

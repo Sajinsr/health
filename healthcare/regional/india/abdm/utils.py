@@ -847,6 +847,134 @@ def on_confirm(token=None, link_ref_number=None, request_id=None):
 		raise e
 
 
+# Milestone-2 Dataflow
+@frappe.whitelist()
+def on_notify(request_id=None, consent_id=None):
+	"""Acknowledges Consent Notification to ABDM HIE-CM (Consent Granted/Revoked/Expired)."""
+
+	if not request_id or not consent_id:
+		frappe.throw("Missing Request ID or Consent ID")
+
+	try:
+		settings = get_abdm_settings()
+		if not settings or not settings.consent_base_url:
+			frappe.throw(
+				title="Configuration Missing",
+				msg="Consent Management Base URL not configured in ABDM Settings.",
+			)
+
+		auth_token = get_token_for_hiecm()
+		if not auth_token or not auth_token.get("accessToken"):
+			frappe.throw("Unable to fetch valid access token for HIE-CM.")
+
+		config = get_url("on_notify")
+		url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+		auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""
+		authorization = auth_prefix + auth_token.get("accessToken")
+
+		headers = {
+			"Content-Type": "application/json",
+			"REQUEST-ID": generate_unique_id(),
+			"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+			"X-CM-ID": settings.x_cm_id,
+			"Authorization": authorization,
+		}
+
+		payload = {
+			"acknowledgement": {"status": "OK", "consentId": consent_id},
+			"response": {"requestId": request_id},
+		}
+
+		try:
+			request_and_post(
+				url=url,
+				payload=payload,
+				headers=headers,
+				method=config.get("method"),
+				request_name="Data Flow On-Notify Request",
+			)
+		except Exception as e:
+			frappe.log_error(
+				message=frappe.get_traceback(), title="Failed to Process ABDM On-Notify Request"
+			)
+			raise e
+
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="Consent On-Notify Error")
+		raise e
+
+
+@frappe.whitelist()
+def on_request(
+	request_id=None, transaction_id=None, data_push_url=None, key_material=None, consent_id=None
+):
+	"""Acknowledges Health Information Request to ABDM HIE-CM."""
+
+	if not request_id or not transaction_id:
+		frappe.throw("Missing Request ID or Transaction ID")
+
+	try:
+		settings = get_abdm_settings()
+		if not settings or not settings.consent_base_url:
+			frappe.throw(
+				title="Configuration Missing",
+				msg="Consent Management Base URL not configured in ABDM Settings.",
+			)
+
+		auth_token = get_token_for_hiecm()
+		if not auth_token or not auth_token.get("accessToken"):
+			frappe.throw("Unable to fetch valid access token for HIE-CM.")
+
+		config = get_url("on_notify")
+		url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+		auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""
+		authorization = auth_prefix + auth_token.get("accessToken")
+
+		headers = {
+			"Content-Type": "application/json",
+			"REQUEST-ID": generate_unique_id(),
+			"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+			"X-CM-ID": settings.x_cm_id,
+			"Authorization": authorization,
+		}
+
+		payload = {
+			"hiRequest": {
+				"transactionId": transaction_id,
+				"sessionStatus": "ACKNOWLEDGED",
+			},
+			"response": {
+				"requestId": request_id,
+			},
+		}
+
+		try:
+			request_and_post(
+				url=url,
+				payload=payload,
+				headers=headers,
+				method=config.get("method"),
+				request_name="Data Flow On-Request Request",
+			)
+			if data_push_url:
+				consent_doc = frappe.get_doc("ABDM Consent", consent_id)
+				consent_doc.data_push_url = data_push_url
+				consent_doc.key_material = json.dumps(key_material, indent=4)
+				consent_doc.transaction_id = transaction_id
+				consent_doc.save(ignore_permissions=True)
+		except Exception as e:
+			frappe.log_error(
+				message=frappe.get_traceback(), title="Failed to Process ABDM On-Request Request"
+			)
+			raise e
+
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="Consent On-Request Error")
+		raise e
+
+
 def validate_otp(token, otp_reference):
 	otp_verified = frappe.db.exists("ABDM Request", {"otp": token, "otp_reference": otp_reference})
 
@@ -1060,6 +1188,10 @@ def post_abdm_request(**args):
 			req.transaction_id = args.get("transaction_id")
 		if args.get("request_id"):
 			req.request_id = args.get("request_id")
+		if args.get("consent_id"):
+			req.consent_id = args.get("consent_id")
+		if args.get("data_push_url"):
+			req.data_push_url = args.get("data_push_url")
 		req.response = json.dumps(args.data, indent=4)
 		req.insert(ignore_permissions=True)
 
