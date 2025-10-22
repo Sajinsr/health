@@ -6,7 +6,7 @@ from frappe.utils import now_datetime
 from healthcare.regional.india.abdm.utils import on_discover, post_abdm_request
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def discover():
 	"""Handles ABDM User-Initiated Linking (HIP → Care Context Discovery Callback)"""
 
