@@ -8,13 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "fhir_datatype",
-  "system_defined",
-  "regex",
-  "column_break_mxwk",
   "is_primitive",
-  "min",
-  "max",
-  "is_required",
+  "system_defined",
+  "column_break_mxwk",
+  "regex",
   "section_break_ahnq",
   "description",
   "section_break_yhef",
@@ -79,28 +76,12 @@
   {
    "fieldname": "section_break_ahnq",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "min",
-   "fieldtype": "Int",
-   "label": "Min"
-  },
-  {
-   "fieldname": "max",
-   "fieldtype": "Data",
-   "label": "Max"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_required",
-   "fieldtype": "Check",
-   "label": "Is Required"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-23 16:11:36.877126",
+ "modified": "2025-10-26 10:29:51.957320",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Datatype",
