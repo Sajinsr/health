@@ -195,7 +195,7 @@ function show_map_dialog(frm) {
 
 					const is_id = el.path === `${sd.fhir_sd}.id`;
 					const is_dt = el.path === sd.fhir_sd;
-					const is_editable = el.is_choice_type;
+					const is_choice_type = el.is_choice_type;
 
 					const map = frm.doc.map.find(({ fhir_path }) =>
 						fhir_path === el.path ||
@@ -226,14 +226,24 @@ function show_map_dialog(frm) {
 					};
 
 					html += `<tr data-path="${el.path}">
-						<td><input class='form-control path' value="${path_val}" ${!is_editable ? "readonly" : ""}></td>
-						<td><input class='form-control type' value="${type_val}" ${!is_editable ? "readonly" : ""}></td>
-						<td><input class='form-control' value="${el.min || 0}" readonly></td>
-						<td><select class='form-control frappe-field' ${is_dt || is_id || is_container ? "disabled" : ""}>
+						<td><input class='form-control path' value="${path_val}" ${!is_choice_type ? "readonly" : ""}></td>
+						`
+					if (is_choice_type) {
+						options = type_val.split(",");
+						html += `<td><select class='form-control datatype-choice'>
+							<option value="">${__("-- Choose Type --")}</option>
+							${options.map(o => `<option value="${o.trim()}" ${o.trim() == type_val ? "selected" : ""}>${o.trim()}</option>`).join("")}
+						</select></td>`
+					} else {
+						html +=`<td><input class='form-control type' value="${type_val}" readonly></td>`
+					}
+
+					html += `<td><input class='form-control' value="${el.min || 0}" readonly></td>
+						<td><select class='form-control frappe-field' ${is_dt || is_id ? "disabled" : ""}>
 							<option value="">${__("-- Select --")}</option>
-							${doc_fields.map(f => `<option value="${f.value}" ${f.value === id_val ? "selected" : ""}>${f.label}</option>`).join("")}
+							${doc_fields.map(f => `<option value="${f.value.trim()}" ${f.value.trim() === id_val ? "selected" : ""}>${f.label}</option>`).join("")}
 						</select></td>
-						<td><input class='form-control default-value' value="${dt_val}" ${is_dt || is_id || is_container ? "readonly" : ""}></td>
+						<td><input class='form-control default-value' value="${dt_val}"></td>
 						</tr>`;
 				});
 
@@ -251,7 +261,9 @@ function show_map_dialog(frm) {
 				dialog.$wrapper.find("tbody").on("change", "select, input", function () {
 					const $tr = $(this).closest("tr");
 					const path = $tr.data("path");
+
 					path_to_mapping[path].datatype = $tr.find(".type").val() || null;
+					path_to_mapping[path].datatype = $tr.find(".datatype-choice").val() || null;
 					path_to_mapping[path].frappe_field = $tr.find(".frappe-field").val() || null;
 					path_to_mapping[path].default_value = $tr.find(".default-value").val() || null;
 				});

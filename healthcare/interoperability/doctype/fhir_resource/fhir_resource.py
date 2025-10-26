@@ -34,5 +34,8 @@ class FHIRResource(Document):
 			return {"issues": response.json().get("issue", []), "status": "success"}
 
 		except Exception as e:
-			frappe.log_error(frappe.get_traceback(), "FHIR Remote Validation Error")
+			frappe.log_error(
+				title="FHIR Resource Validation Error",
+				msg=f"FHIR Resource Validator:\n{frappe.get_traceback()}",
+			)
 			return {"error": str(e)}
