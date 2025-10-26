@@ -83,13 +83,16 @@ class FHIRPackageImporter:
 		if not sd_url:
 			return
 
-		existing_name = frappe.db.get_value(
-			"FHIR Structure Definition",
-			{"url": sd_url, "fhir_profile": self.profile_name, "fhir_version": self.version_name},
+		existing = frappe.db.exists(
+			{
+				"doctype": "FHIR Structure Definition",
+				"url": sd_url,
+				"fhir_profile": self.profile_name if self.profile_name else "",
+				"fhir_version": self.version_name,
+			}
 		)
-
-		if existing_name:
-			sd = frappe.get_doc("FHIR Structure Definition", existing_name)
+		if existing:
+			sd = frappe.get_doc("FHIR Structure Definition", existing)
 			sd.set("element_paths", [])
 		else:
 			sd = frappe.new_doc("FHIR Structure Definition")
@@ -100,10 +103,10 @@ class FHIRPackageImporter:
 		sd.url = sd_url
 		sd.kind = (sd_data.get("kind") or "").capitalize()
 		sd.status = (sd_data.get("status") or "").capitalize()
-		sd.sd_type = "base"
+		# sd.sd_type = "base"
 		sd.sd_version = sd_data.get("version")
 		sd.publisher = sd_data.get("publisher")
-		sd.sd = json.dumps(sd_data, indent=1)
+		sd.sd = json.dumps(sd_data, indent=2)
 
 		self._populate_element_paths(sd, sd_data)
 
@@ -122,14 +125,19 @@ class FHIRPackageImporter:
 			row.min = e.get("min", 0)
 			row.max = e.get("max")
 			row.is_required = e.get("min", 0) > 0
-			row.mapping = json.dumps(e.get("mapping"), indent=1)
 
-			types = e.get("type") or e.get("types") or []
+			types = e.get("type") or []
 			normalized_types = []
 			for t in types:
 				code = t.get("code") if isinstance(t, dict) else t
 				code = FHIR_SYSTEM_TYPE_MAP.get(code, code)
 				normalized_types.append(code)
+
+				# check for regex in extensions
+				extensions = t.get("extension") or []
+				for ext in extensions:
+					if ext.get("url").endswith("regex"):
+						row.regex = ext.get("valueString")
 
 			if len(normalized_types) == 1:
 				row.datatype = normalized_types[0]
