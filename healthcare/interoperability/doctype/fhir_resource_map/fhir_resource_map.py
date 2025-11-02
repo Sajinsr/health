@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from healthcare.interoperability.fhir_engine.fhir_builder import FHIRResourceBuilder
+
 # from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
 from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
 
@@ -83,4 +85,12 @@ class FHIRResourceMap(Document):
 
 		generator = FHIRResourceGenerator(self, frappe_doc)
 		resource_json = generator.generate()
+		return resource_json
+
+	@frappe.whitelist()
+	def new_preview_fhir_resource(self, docname, show_errors=False):
+		frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
+
+		builder = FHIRResourceBuilder(self, frappe_doc)
+		resource_json = builder.build()
 		return resource_json

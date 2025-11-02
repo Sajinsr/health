@@ -170,12 +170,11 @@ class ComplexDatatypeBuilder:
 
 			leaf = relative_leaf
 			datatype = resolve_datatype(mapping, self.frappe_doc)
-			max_cardinality = mapping.max
 
 			if datatype in get_primitive_datatypes():
 				value = self.primitive_builder.build(mapping)
 				if value is not None:
-					result[leaf] = [value] if max_cardinality == "*" else value
+					result[leaf] = [value] if mapping.max == "*" else value
 
 			elif datatype == "Extension":
 				ext = self.extension_builder.build(path)
@@ -186,7 +185,7 @@ class ComplexDatatypeBuilder:
 				# Treat any non-primitive (including BackboneElement/Resource) as complex
 				nested = self.build(path)
 				if nested:
-					result[leaf] = [nested] if max_cardinality == "*" else nested
+					result[leaf] = [nested] if mapping.max == "*" else nested
 
 		return result if result else None
 
@@ -194,7 +193,6 @@ class ComplexDatatypeBuilder:
 		prefix = parent_path + "."
 		return {path: m for path, m in self.mappings_by_path.items() if path.startswith(prefix)}
 
-	# Kept for future: pull unmapped children from the datatype table if desired.
 	def _get_unmapped_children(self, parent_path):  # unused
 		parent_mapping = self.mappings_by_path.get(parent_path)
 		if not parent_mapping:
@@ -243,7 +241,6 @@ class FHIRResourceMapIterator:
 				continue
 
 			datatype = resolve_datatype(mapping, self.frappe_doc)
-			max_cardinality = mapping.max
 
 			if datatype in get_primitive_datatypes():
 				value = self.primitive_builder.build(mapping)
@@ -255,7 +252,7 @@ class FHIRResourceMapIterator:
 			if value is None:
 				continue
 
-			if max_cardinality == "*":
+			if mapping.max == "*":
 				if not isinstance(value, list):
 					value = [value]
 
@@ -280,7 +277,7 @@ class FHIRResourceMapIterator:
 		if getattr(mapping, "binding_strength", None) == "required" and getattr(
 			mapping, "valueset_url", None
 		):
-			valid_codes = self._get_valid_codes(mapping.valueset_url)
+			valid_codes = self._get_valid_codes(mapping.valueset_url)  # TODO: fetch from Code Values
 			if value not in valid_codes:
 				raise ValueError(
 					f"{fhir_path}: value '{value}' not in required ValueSet {mapping.valueset_url}"
@@ -340,3 +337,48 @@ class FHIRResourceGenerator:
 				"div": f"<div xmlns='http://www.w3.org/1999/xhtml'>{div_html}</div>",
 			}
 		}
+
+
+def make_resource_entry(resource):
+	"""Wrap a resource in a Bundle.entry structure."""
+	return {
+		"fullUrl": f"urn:uuid:{resource['id']}",
+		"resource": resource,
+		"request": {"method": "POST", "url": resource["resourceType"]},
+	}
+
+
+def make_composition(title, author_ref, subject_ref, section_entries, type):
+	"""Create a FHIR Composition resource referencing other resources."""
+	composition_id = frappe.generate_hash(length=64)
+	return {
+		"resourceType": "Composition",
+		"id": composition_id,
+		"status": "final",
+		"type": {"coding": type if isinstance(type, list) else [type]},
+		"title": title,
+		"date": f"{frappe.utils.now_datetime().isoformat(timespec='seconds')}Z",
+		"author": [{"reference": author_ref}],
+		"subject": {"reference": subject_ref},
+		"section": [{"title": "Clinical Data", "entry": [{"reference": e} for e in section_entries]}],
+	}
+
+
+def make_bundle(resources, composition):
+	"""Combine Composition + other resources into a transaction Bundle."""
+	bundle = {
+		"resourceType": "Bundle",
+		"type": "transaction",
+		"id": frappe.generate_hash(length=64),
+		"timestamp": f"{frappe.utils.now_datetime().isoformat(timespec='seconds')}Z",
+		"entry": [],
+	}
+
+	# add composition first
+	bundle["entry"].append(make_resource_entry(composition))
+
+	# then add other resources
+	for resource in resources:
+		bundle["entry"].append(make_resource_entry(resource))
+
+	return bundle
