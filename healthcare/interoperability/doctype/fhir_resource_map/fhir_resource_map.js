@@ -116,6 +116,57 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
+
+		frm.add_custom_button(__("New Preview Resource"), () => {
+			if (!frm.doc.frappe_doctype) {
+				frappe.throw(__("Please map a Doctype and fields to generate preview."));
+			}
+			const dialog = new frappe.ui.Dialog({
+				title: __("New FHIR Resource Preview"),
+				fields: [
+					{
+						label: __(`Select a ${frm.doc.frappe_doctype} Document`),
+						fieldname: "docname",
+						fieldtype: "Link",
+						options: frm.doc.frappe_doctype,
+						reqd: true
+					}
+				],
+				primary_action_label: "Preview",
+				primary_action(values) {
+					const docname = values.docname;
+					frappe.call({
+						method: "new_preview_fhir_resource",
+						doc: frm.doc,
+						args: { docname: docname },
+						callback(res) {
+							const json = JSON.stringify(res.message, null, 2);
+							const blob = new Blob([json], { type: 'application/json' });
+							const url = URL.createObjectURL(blob);
+							const downloadId = frappe.utils.get_random(8);
+
+							const html = `
+								<pre style="max-height: 600px; overflow: auto;">${frappe.utils.escape_html(json)}</pre>
+								<div style="margin-top: 1rem;">
+									<a id="download-${downloadId}" href="${url}" download="${frm.doc.frappe_doctype}-${docname}-Marley-FHIR.json" class="btn btn-sm btn-primary">
+										${__("New Download JSON")}
+									</a>
+								</div>
+							`;
+							dialog.hide();
+
+							frappe.msgprint({
+								title: __("New FHIR Resource Preview"),
+								message: html,
+								indicator: "blue",
+								wide: 1,
+							});
+						}
+					});
+				}
+			});
+			dialog.show();
+		});
 	}
 });
 
@@ -226,7 +277,7 @@ function show_map_dialog(frm) {
 					};
 
 					html += `<tr data-path="${el.path}">
-						<td><input class='form-control path' value="${path_val}" ${!is_choice_type ? "readonly" : ""}></td>
+						<td><input class='form-control path' value="${path_val}" readonly></td>
 						`
 					if (is_choice_type) {
 						options = type_val.split(",");
