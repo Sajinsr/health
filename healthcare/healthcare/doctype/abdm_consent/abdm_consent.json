@@ -14,6 +14,7 @@
   "timestamp",
   "data_push_url",
   "transaction_id",
+  "test_check",
   "section_break_rpki",
   "consent_detail",
   "care_contexts",
@@ -107,13 +108,19 @@
    "fieldtype": "Code",
    "label": "Consent Detail",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "test_check",
+   "fieldtype": "Check",
+   "label": "Test Check"
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-22 16:55:15.803619",
+ "modified": "2025-11-03 16:47:35.135459",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Consent",

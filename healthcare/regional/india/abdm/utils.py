@@ -1091,6 +1091,7 @@ def build_care_context_details(data):
 
 def get_carecontext(doc):
 	"""HItypes: Prescription,DiagnosticReport,OPConsultation,DischargeSummary,ImmunizationRecord,HealthDocumentRecord,WellnessRecord,Invoice"""
+
 	carecontext = []
 	display = None
 	hitype = None
