@@ -209,6 +209,7 @@ function show_map_dialog(frm) {
 			.then(sd => {
 				let elements = sd.element_paths;
 				let path_to_mapping = {};
+				// load other profiles
 
 				const dialog = new frappe.ui.Dialog({
 					title: __("Map FHIR {0} ({1}) → Frappe {2}", [sd.fhir_sd, sd.sd_version, frm.doc.frappe_doctype]),
