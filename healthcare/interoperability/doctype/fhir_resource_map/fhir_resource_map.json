@@ -8,6 +8,8 @@
   "is_active",
   "fhir_version",
   "fhir_profile",
+  "column_break_uanw",
+  "fhir_profiles",
   "section_break_vaer",
   "fhir_structure_def",
   "resource_type",
@@ -198,12 +200,22 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "label": "Description"
+  },
+  {
+   "fieldname": "fhir_profiles",
+   "fieldtype": "Table",
+   "label": "FHIR Profiles",
+   "options": "FHIR Resource Map Profile"
+  },
+  {
+   "fieldname": "column_break_uanw",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-18 16:55:51.113786",
+ "modified": "2025-12-05 15:20:48.727618",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",
