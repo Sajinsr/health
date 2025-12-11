@@ -61,6 +61,24 @@ frappe.ui.form.on("FHIR Resource Map", {
 	},
 
 	refresh: (frm) => {
+		frm.add_custom_button(__("Load Structure Definitions"), () => {
+			frm.call({
+				method: 'rebuild_element_map',   // method on DocType class
+				doc: frm.doc,
+				freeze: true,
+				freeze_message: __('Overlaying profiles and rebuilding elements_map...'),
+				callback: function (r) {
+					if (!r.exc) {
+						frappe.show_alert({
+							message: __('Elements Map rebuilt from StructureDefinitions.'),
+							indicator: "success",
+						});
+						frm.reload_doc();
+					}
+				},
+			});
+		});
+
 		frm.fields_dict["map"].grid.wrapper.find(".grid-add-row").hide();
 		frm.fields_dict["map"].grid.add_custom_button(__("Map Fields"), () => {
 			show_map_dialog(frm);
@@ -116,7 +134,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
-
+/*
 		frm.add_custom_button(__("New Preview Resource"), () => {
 			if (!frm.doc.frappe_doctype) {
 				frappe.throw(__("Please map a Doctype and fields to generate preview."));
@@ -167,6 +185,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
+*/
 	}
 });
 
@@ -207,7 +226,9 @@ function show_map_dialog(frm) {
 		}
 		frappe.db.get_doc("FHIR Structure Definition", frm.doc.fhir_structure_def)
 			.then(sd => {
-				let elements = sd.element_paths;
+			if (frm.doc.map) {
+				let elements = frm.doc.map;
+				console.log(elements.length);
 				let path_to_mapping = {};
 				// load other profiles
 
@@ -243,24 +264,24 @@ function show_map_dialog(frm) {
 				html += `<tbody>`
 
 				elements.forEach(el => {
-				    if (el.path === sd.fhir_sd) return;
+				    if (el.fhir_path === sd.fhir_sd) return;
 
-					const is_id = el.path === `${sd.fhir_sd}.id`;
-					const is_dt = el.path === sd.fhir_sd;
+					const is_id = el.fhir_path === `${sd.fhir_sd}.id`;
+					const is_dt = el.fhir_path === sd.fhir_sd;
 					const is_choice_type = el.is_choice_type;
 
 					const map = frm.doc.map.find(({ fhir_path }) =>
-						fhir_path === el.path ||
-						(el.path.includes("[x]") && fhir_path.startsWith(el.path.replace("[x]", "")))
+						fhir_path === el.fhir_path ||
+						(el.fhir_path.includes("[x]") && fhir_path.startsWith(el.fhir_path.replace("[x]", "")))
 					);
 					const id_val = is_id ? "name" : (map ? map.frappe_field : "");
 					const dt_val = is_dt ? frm.doc.frappe_doctype : (map ? (map.default_value || "") : "");
 					const type_val = (map && map.datatype) || el.datatype || "";
-					const path_val = (map && map.fhir_path) || el.path || "";
+					const path_val = (map && map.fhir_path) || el.fhir_path || "";
 					const is_container = COMPLEX_FHIR_DATATYPES.includes(el.datatype)
 
-					path_to_mapping[el.path] = {
-						fhir_path: el.path,
+					path_to_mapping[el.fhir_path] = {
+						fhir_path: el.fhir_path,
 						frappe_field: id_val || null,
 						datatype: type_val || el.type,
 						min: el.min,
@@ -277,7 +298,7 @@ function show_map_dialog(frm) {
 						target_profiles: el.target_profiles,
 					};
 
-					html += `<tr data-path="${el.path}">
+					html += `<tr data-path="${el.fhir_path}">
 						<td><input class='form-control path' value="${path_val}" readonly></td>
 						`
 					if (is_choice_type) {
@@ -291,6 +312,7 @@ function show_map_dialog(frm) {
 					}
 
 					html += `<td><input class='form-control' value="${el.min || 0}" readonly></td>
+						<td><input class='form-control' value="${el.max || 0}" readonly></td>
 						<td><select class='form-control frappe-field' ${is_dt || is_id ? "disabled" : ""}>
 							<option value="">${__("-- Select --")}</option>
 							${doc_fields.map(f => `<option value="${f.value.trim()}" ${f.value.trim() === id_val ? "selected" : ""}>${f.label}</option>`).join("")}
@@ -321,7 +343,10 @@ function show_map_dialog(frm) {
 				});
 
 				dialog.show();
-			});
+			} else {
+				frappe.msgprint("Please load Structure definition and Profiles first")
+			}
+		});
 	});
 }
 
@@ -354,8 +379,9 @@ function get_header_row_html() {
 		<thead>
 			<tr>
 			<th style='width:30%;'>${__("FHIR Element Path")}</th>
-			<th style='width:20%;'>${__("Data Type")}</th>
+			<th style='width:10%;'>${__("Data Type")}</th>
 			<th style='width:10%;'>${__("Min Card")}</th>
+			<th style='width:10%;'>${__("Max Card")}</th>
 			<th style='width:20%;'>${__("Frappe Field")}</th>
 			<th style='width:20%;'>${__("Default Value")}</th>
 			</tr>

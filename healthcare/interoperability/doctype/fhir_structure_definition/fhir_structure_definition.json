@@ -47,8 +47,7 @@
    "fieldname": "element_paths",
    "fieldtype": "Table",
    "label": "Element Paths",
-   "options": "FHIR Structure Definition Element",
-   "read_only": 1
+   "options": "FHIR Structure Definition Element"
   },
   {
    "fieldname": "url",
@@ -140,10 +139,9 @@
   }
  ],
  "grid_page_length": 50,
- "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-26 12:12:59.218079",
+ "modified": "2025-12-09 15:08:46.245724",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Structure Definition",

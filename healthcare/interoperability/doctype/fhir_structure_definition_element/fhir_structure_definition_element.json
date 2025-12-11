@@ -46,16 +46,14 @@
    "fieldname": "min",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Minimum Cardinality",
-   "read_only": 1
+   "label": "Minimum Cardinality"
   },
   {
    "columns": 1,
    "fieldname": "max",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Maximum Cardinality",
-   "read_only": 1
+   "label": "Maximum Cardinality"
   },
   {
    "columns": 1,
@@ -64,8 +62,7 @@
    "fieldname": "is_required",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Required",
-   "read_only": 1
+   "label": "Required"
   },
   {
    "fieldname": "definition",
@@ -76,28 +73,24 @@
   {
    "fieldname": "short",
    "fieldtype": "Text",
-   "label": "Short",
-   "read_only": 1
+   "label": "Short"
   },
   {
    "default": "0",
    "fieldname": "is_choice_type",
    "fieldtype": "Check",
-   "label": "Is Choice Type",
-   "read_only": 1
+   "label": "Is Choice Type"
   },
   {
    "fieldname": "datatype",
    "fieldtype": "Code",
    "in_list_view": 1,
-   "label": "Datatype",
-   "read_only": 1
+   "label": "Datatype"
   },
   {
    "fieldname": "binding_strength",
    "fieldtype": "Data",
-   "label": "Binding Strength",
-   "read_only": 1
+   "label": "Binding Strength"
   },
   {
    "fieldname": "valueset_url",
@@ -108,20 +101,17 @@
   {
    "fieldname": "fixed_value",
    "fieldtype": "Code",
-   "label": "Fixed Value",
-   "read_only": 1
+   "label": "Fixed Value"
   },
   {
    "fieldname": "pattern_value",
    "fieldtype": "Code",
-   "label": "Pattern Value",
-   "read_only": 1
+   "label": "Pattern Value"
   },
   {
    "fieldname": "default_value",
    "fieldtype": "Code",
-   "label": "Default Value",
-   "read_only": 1
+   "label": "Default Value"
   },
   {
    "fieldname": "section_break_irwq",
@@ -130,21 +120,19 @@
   {
    "fieldname": "target_profiles",
    "fieldtype": "Code",
-   "label": "Target Profiles",
-   "read_only": 1
+   "label": "Target Profiles"
   },
   {
    "fieldname": "regex",
    "fieldtype": "Code",
-   "label": "Regex",
-   "read_only": 1
+   "label": "Regex"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-26 13:11:41.138621",
+ "modified": "2025-12-09 15:12:47.542411",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Structure Definition Element",
