@@ -29,6 +29,8 @@
   "description",
   "section_break_nqfe",
   "map",
+  "section_break_domt",
+  "element_map",
   "tab_break_kivw",
   "fhir_json_section",
   "structure_definition"
@@ -210,12 +212,21 @@
   {
    "fieldname": "column_break_uanw",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "element_map",
+   "fieldtype": "Table",
+   "options": "FHIR Resource Element Map"
+  },
+  {
+   "fieldname": "section_break_domt",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-05 15:20:48.727618",
+ "modified": "2025-12-09 11:58:15.703289",
  "modified_by": "Administrator",
  "module": "Interoperability",
  "name": "FHIR Resource Map",
