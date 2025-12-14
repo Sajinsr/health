@@ -61,24 +61,53 @@ frappe.ui.form.on("FHIR Resource Map", {
 	},
 
 	refresh: (frm) => {
-		frm.add_custom_button(__("Load Structure Definitions"), () => {
-			frm.call({
-				method: 'rebuild_element_map',   // method on DocType class
-				doc: frm.doc,
-				freeze: true,
-				freeze_message: __('Overlaying profiles and rebuilding elements_map...'),
-				callback: function (r) {
-					if (!r.exc) {
-						frappe.show_alert({
-							message: __('Elements Map rebuilt from StructureDefinitions.'),
-							indicator: "success",
-						});
-						frm.reload_doc();
-					}
+		frm.add_custom_button(__("Load SDs"), () => {
+			frappe.prompt(
+				{
+					label: __("Max Datatype Depth"),
+					fieldname: "max_datatype_depth",
+					fieldtype: "Int",
+					default: 2,
+					reqd: 1,
 				},
-			});
+				(values) => {
+					frm.call({
+						method: 'overlay_structure_definitions',   // method on DocType class
+						doc: frm.doc,
+						args: values,
+						freeze: true,
+						freeze_message: __('Overlaying profiles and rebuilding elements_map...'),
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.show_alert({
+									message: __('Elements Map rebuilt from StructureDefinitions.'),
+									indicator: "success",
+								});
+								frm.reload_doc();
+							}
+						},
+					});
+				},
+				__("Datatype Expansion Depth")
+			);
 		});
-
+		// frm.add_custom_button(__("Load SDs 2"), () => {
+		// 	frm.call({
+		// 		method: 'rebuild_element_map',   // method on DocType class
+		// 		doc: frm.doc,
+		// 		freeze: true,
+		// 		freeze_message: __('Overlaying profiles and rebuilding elements_map...'),
+		// 		callback: function (r) {
+		// 			if (!r.exc) {
+		// 				frappe.show_alert({
+		// 					message: __('Elements Map rebuilt from StructureDefinitions.'),
+		// 					indicator: "success",
+		// 				});
+		// 				frm.reload_doc();
+		// 			}
+		// 		},
+		// 	});
+		// });
 		frm.fields_dict["map"].grid.wrapper.find(".grid-add-row").hide();
 		frm.fields_dict["map"].grid.add_custom_button(__("Map Fields"), () => {
 			show_map_dialog(frm);
@@ -134,13 +163,13 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
-/*
-		frm.add_custom_button(__("New Preview Resource"), () => {
+
+		frm.add_custom_button(__("Preview"), () => {
 			if (!frm.doc.frappe_doctype) {
 				frappe.throw(__("Please map a Doctype and fields to generate preview."));
 			}
 			const dialog = new frappe.ui.Dialog({
-				title: __("New FHIR Resource Preview"),
+				title: __("FHIR Resource Preview"),
 				fields: [
 					{
 						label: __(`Select a ${frm.doc.frappe_doctype} Document`),
@@ -185,7 +214,7 @@ frappe.ui.form.on("FHIR Resource Map", {
 			});
 			dialog.show();
 		});
-*/
+
 	}
 });
 

@@ -5,14 +5,18 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from healthcare.interoperability.fhir_engine.fhir_resource_generator import (
-	generate_fhir_resource_from_map,
-)
+from healthcare.interoperability.fhir_engine.fhir_generator import generate_fhir_resource
+from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
 
+# from healthcare.interoperability.fhir_engine.fhir_resource_generator import (
+# 	generate_fhir_resource_from_map,
+# )
 # from healthcare.interoperability.fhir_engine.fhir_builder import FHIRResourceBuilder
-
 # from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
 # from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
+
+
+REQUIRED_BINDING = "required"
 
 
 class FHIRResourceMap(Document):
@@ -28,24 +32,28 @@ class FHIRResourceMap(Document):
 
 	def validate(self):
 		self.resource_type = self.fhir_structure_def.split("-", 1)[0]
+		self._overlay_cache = None
 
-		# also need to consider COMPLEX_FHIR_DATATYPES (validation present in cscript for now)
-		# missing = [
-		# 	fm.fhir_path for fm in self.map if fm.min > 0 and not fm.frappe_field and not fm.default_value
-		# ]
-		# if missing:
-		# 	frappe.throw(
-		# 		_(
-		# 			"You must map or supply a default value for these FHIR elements which are required as per Resource Structure Definition:\n  "
-		# 		)
-		# 		+ "\n  ".join(missing)
-		# 	)
+		self.validate_element_map()
 
 	@frappe.whitelist()
 	def save_mapped_elements(self, elements):
 		self.set("map", [])
-		print(f"count: {len(elements)}")
+
 		for el in elements:
+			# Validate child table field for max *
+			# Disabled to allow single values
+			# if el.get("max") == "*" and el.get("frappe_field"):
+			# 	df = frappe.get_meta(self.frappe_doctype).get_field(el.get("frappe_field"))
+			# 	is_child_table = df and df.fieldtype == "Table"
+
+			# 	if not is_child_table:
+			# 		frappe.throw(
+			# 			f"FHIR element '{el.get('fhir_path')}' is repeating (max='*'), "
+			# 			f"but Resource Map points to a single field '{el.get('frappe_field')}'. "
+			# 			"Use a child table instead."
+			# 		)
+
 			fhir_path = el.get("fhir_path")
 			datatype = el.get("datatype")
 
@@ -85,360 +93,551 @@ class FHIRResourceMap(Document):
 
 	@frappe.whitelist()
 	def new_preview_fhir_resource(self, docname, show_errors=False):
-		frappe.msgprint("Not Implemented")
-		# frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
-
-		# generator = FHIRResourceGenerator(self, frappe_doc)
-		# resource_json = generator.generate()
-		# return resource_json
+		frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
+		return generate_fhir_resource(self, frappe_doc)
 
 	@frappe.whitelist()
 	def preview_fhir_resource(self, docname, show_errors=False):
-		# frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
+		frappe_doc = frappe.get_doc(self.frappe_doctype, docname)
+		generator = FHIRResourceGenerator(self, frappe_doc)
+		resource_json = generator.generate()
+		return resource_json
 
-		# builder = FHIRResourceBuilder(self, frappe_doc)
-		# resource_json = builder.build()
-		# return resource_json
-		resource_map = frappe.get_doc("FHIR Resource Map", self.name)
-		patient_doc = frappe.get_doc("Patient", docname)
-		resource = generate_fhir_resource_from_map(resource_map, patient_doc)
-		return resource
+	def get_structure_definition_names(self):
+		names = []
 
-	@frappe.whitelist()
-	def rebuild_element_map(self):
+		if self.fhir_structure_def:
+			names.append(self.fhir_structure_def)
+
+		for row in self.fhir_profiles or []:
+			if row.fhir_structure_definition:
+				names.append(row.fhir_structure_definition)
+
+		return names
+
+	def get_overlay_map(self):
+		if hasattr(self, "_overlay_cache") and self._overlay_cache is not None:
+			return self._overlay_cache
+
+		self._overlay_cache = self.build_structure_definition_overlay()
+		return self._overlay_cache
+
+	def build_structure_definition_overlay(self, structure_definition_names=None):
+		if not structure_definition_names:
+			structure_definition_names = self.get_structure_definition_names()
+
+		if not structure_definition_names:
+			frappe.throw("At least one FHIR Structure Definition is required")
+
+		overlay_by_path = {}
+
+		for structure_definition_name in structure_definition_names:
+			structure_definition = frappe.get_doc(
+				"FHIR Structure Definition",
+				structure_definition_name,
+			)
+
+			for element_row in structure_definition.element_paths or []:
+				element_path = element_row.get("fhir_path") or element_row.get("path")
+				if not element_path:
+					continue
+
+				incoming = element_row.as_dict()
+				incoming["source_structure_definition"] = structure_definition_name
+
+				datatype_value = incoming.get("fhir_datatype") or incoming.get("datatype")
+				if datatype_value:
+					incoming["fhir_datatype"] = datatype_value
+
+				if element_path not in overlay_by_path:
+					overlay_by_path[element_path] = incoming
+				else:
+					current = overlay_by_path[element_path]
+					overlay_by_path[element_path] = self.apply_most_restrictive_element(
+						current,
+						incoming,
+					)
+		overlay_by_path = self.expand_complex_datatypes(overlay_by_path)
+
+		return overlay_by_path
+
+	def expand_complex_datatypes(self, overlay_map):
 		"""
-		Overlay base + profile StructureDefinitions and populate the
-		`map` child table (FHIR Resource Element Map).
+		Take an overlay_map { fhir_path -> meta } and expand complex datatypes
+		using FHIR Datatype Element definitions.
+
+		Guarantees termination by:
+		- Not expanding known recursive/meta-ish types (Extension, Element, etc.)
+		- Tracking datatype ancestry per path and skipping recursive cycles
+		- Enforcing a max datatype nesting depth per path
 		"""
-		base_structure_definition_name = getattr(self, "fhir_structure_def", None)
-		if not base_structure_definition_name:
-			frappe.throw("Base FHIR Structure Definition is not set on FHIR Resource Map.")
 
-		# Collect profile StructureDefinition names from child table in idx order
-		profile_structure_definition_names = []
-		profile_rows = getattr(self, "fhir_profiles", []) or []
-		profile_rows = sorted(profile_rows, key=lambda row: getattr(row, "idx", 0))
+		datatype_elements_by_type = self.get_datatype_elements_index()
+		primitive_datatypes = self.get_primitive_datatype_names()
 
-		for row in profile_rows:
-			sd_name = getattr(row, "fhir_structure_definition", None)
-			if sd_name:
-				profile_structure_definition_names.append(sd_name)
-
-		effective_elements = build_effective_elements(
-			base_structure_definition_name,
-			profile_structure_definition_names,
-		)
-
-		# Preserve existing mappings for same fhir_path
-		existing_by_path = {}
-		existing_rows = getattr(self, "map", []) or []
-		for row in existing_rows:
-			path = getattr(row, "fhir_path", None)
-			if path:
-				existing_by_path[path] = row
-
-		# Reset child table and repopulate
-		self.set("map", [])
-
-		for path in sorted(effective_elements.keys()):
-			eff = effective_elements[path]
-
-			new_row = self.append("map", {})
-			# Core definition fields
-			new_row.fhir_path = eff["path"]
-
-			# datatype (string)
-			datatype_str = ",".join(sorted(eff["type_codes"])) if eff["type_codes"] else None
-			new_row.datatype = datatype_str
-
-			# If there is exactly one type code, set fhir_datatype link to it
-			# so regex gets pulled via fetch_from
-			if eff["type_codes"] and len(eff["type_codes"]) == 1:
-				new_row.fhir_datatype = list(eff["type_codes"])[0]
-			else:
-				new_row.fhir_datatype = None
-
-			new_row.min = eff["min"]
-			new_row.max = eff["max"]
-			new_row.short = eff["short"]
-			new_row.definition = eff["definition"]
-			new_row.valueset_url = eff["valueset_url"]
-			new_row.binding_strength = eff["binding_strength"]
-
-			# derived flags
-			new_row.is_required = 1 if eff["min"] is not None and eff["min"] > 0 else 0
-			# basic heuristic: multiple types → choice type
-			new_row.is_choice_type = 1 if eff["type_codes"] and len(eff["type_codes"]) > 1 else 0
-
-			# carry over existing mapping-related fields
-			existing_row = existing_by_path.get(path)
-			if existing_row:
-				for fieldname in (
-					"frappe_field",
-					# "fixed_value",
-					# "pattern_value",
-					"default_value",
-					# "profile",
-					# "target_profiles",
-				):
-					if hasattr(existing_row, fieldname):
-						setattr(new_row, fieldname, getattr(existing_row, fieldname))
-
-		self.save()
-		return self.name
-
-
-def build_effective_elements(base_structure_definition_name, profile_structure_definition_names):
-	effective_elements = {}
-
-	base_structure_definition = frappe.get_doc(
-		"FHIR Structure Definition", base_structure_definition_name
-	)
-	build_effective_elements_from_structure_definition(effective_elements, base_structure_definition)
-
-	for profile_structure_definition_name in profile_structure_definition_names:
-		profile_structure_definition = frappe.get_doc(
-			"FHIR Structure Definition", profile_structure_definition_name
-		)
-		overlay_structure_definition(effective_elements, profile_structure_definition)
-
-	cleanup_effective_elements(effective_elements)
-	return effective_elements
-
-
-def build_effective_elements_from_structure_definition(
-	effective_elements, structure_definition_document
-):
-	for element in getattr(structure_definition_document, "element_paths", []):
-		path = get_element_path(element)
-		if not path:
-			continue
-
-		type_codes = get_element_type_codes(element)
-
-		effective_elements[path] = {
-			"path": path,
-			"min": get_int(getattr(element, "min", None)),
-			"max": get_maximum_value(getattr(element, "max", None)),
-			"type_codes": type_codes,
-			"binding_strength": getattr(element, "binding_strength", None),
-			"valueset_url": getattr(element, "valueset_url", None),
-			"is_required": bool(getattr(element, "is_required", 0)),
-			"short": getattr(element, "short", None),
-			"definition": getattr(element, "definition", None),
-			"is_removed": is_removed(getattr(element, "max", None)),
-			"regex": getattr(element, "regex", None),
-			"fixed_value": getattr(element, "fixed_value", None),
-			"pattern_value": getattr(element, "pattern_value", None),
-			"default_value": getattr(element, "default_value", None),
-			"target_profiles": getattr(element, "target_profiles", None),
+		NON_EXPANDING_TYPES = {
+			"Extension",
+			"Element",
+			"BackboneElement",  # optional, remove if you *want* to expand it
+			"Narrative",
+			"Resource",
+			"ElementDefinition",
+			"xhtml",
 		}
 
+		MAX_DATATYPE_DEPTH = 2  # TODO prompt user
 
-def overlay_structure_definition(effective_elements, structure_definition_document):
-	for element in getattr(structure_definition_document, "element_paths", []):
-		path = get_element_path(element)
-		if not path:
-			continue
+		# Seed ancestry + depth for existing overlay entries (from StructureDefinitions)
+		for path, meta in overlay_map.items():
+			datatype = meta.get("fhir_datatype") or meta.get("datatype")
+			if datatype:
+				meta["_datatype_ancestry"] = [datatype]
+				meta["_datatype_depth"] = 1
 
-		if path not in effective_elements:
-			effective_elements[path] = {
-				"path": path,
-				"min": None,
-				"max": None,
-				"type_codes": set(),
-				"binding_strength": None,
-				"valueset_url": None,
-				"is_required": False,
-				"short": None,
-				"definition": None,
-				"is_removed": False,
-				"regex": "",
-				"fixed_value": "",
-				"pattern_value": "",
-				"default_value": "",
-				"target_profiles": "",
+		previous_count = -1
+
+		while previous_count != len(overlay_map):
+			previous_count = len(overlay_map)
+			new_entries = {}
+
+			for parent_path, meta in list(overlay_map.items()):
+				datatype = meta.get("fhir_datatype") or meta.get("datatype")
+				if not datatype:
+					continue
+
+				# Skip primitives entirely
+				if datatype in primitive_datatypes:
+					continue
+
+				# Skip meta-ish recursive types
+				if datatype in NON_EXPANDING_TYPES:
+					continue
+
+				elements = datatype_elements_by_type.get(datatype)
+				if not elements:
+					continue
+
+				ancestry = meta.get("_datatype_ancestry") or [datatype]
+				try:
+					depth = int(meta.get("_datatype_depth") or len(ancestry) or 0)
+				except Exception:
+					depth = len(ancestry) or 0
+
+				# Hard-limit nesting depth per path
+				if depth >= MAX_DATATYPE_DEPTH:
+					continue
+
+				for element in elements:
+					# Try multiple possible fields, depending on how you stored them
+					element_name = element.get("element_name") or element.get("fhir_path") or element.get("path")
+					if not element_name:
+						continue
+
+					# Root row "CodeableConcept" etc – skip
+					if element_name == datatype:
+						continue
+
+					# Expect "CodeableConcept.coding", "CodeableConcept.coding.code", etc.
+					if not element_name.startswith(datatype + "."):
+						# If your datatype elements are stored as suffixes ("coding.code"),
+						# then adjust this block to prepend datatype before checking.
+						continue
+
+					suffix = element_name[len(datatype) + 1 :]
+					expanded_path = f"{parent_path}.{suffix}"
+
+					# Skip if we already have this path
+					if expanded_path in overlay_map or expanded_path in new_entries:
+						continue
+
+					child_meta = element.copy()
+					child_meta["fhir_path"] = expanded_path
+
+					child_datatype = child_meta.get("fhir_datatype") or child_meta.get("datatype")
+					if child_datatype:
+						child_meta["fhir_datatype"] = child_datatype
+						child_meta["datatype"] = child_datatype
+
+					child_ancestry = list(ancestry)
+
+					if child_datatype:
+						# Cycle: datatype already seen on this path
+						if child_datatype in child_ancestry:
+							# e.g. Identifier -> Reference -> Identifier, or Extension -> Extension
+							continue
+
+						child_ancestry.append(child_datatype)
+						child_meta["_datatype_ancestry"] = child_ancestry
+
+						child_depth = depth + 1
+						child_meta["_datatype_depth"] = child_depth
+
+						if child_depth > MAX_DATATYPE_DEPTH:
+							# Do not add; would exceed depth limit
+							continue
+
+					if not child_meta.get("source_structure_definition"):
+						child_meta["source_structure_definition"] = f"Datatype:{datatype}"
+
+					new_entries[expanded_path] = child_meta
+
+			if new_entries:
+				if len(overlay_map) + len(new_entries) > 20000:
+					# dump a sample so you can see the pattern
+					sample_keys = list(new_entries.keys())[:20]
+					frappe.log_error(
+						message="\n".join(sample_keys),
+						title="FHIR datatype expansion: new entries (sample)",
+					)
+				overlay_map.update(new_entries)
+
+		return overlay_map
+
+	def get_datatype_elements_index(self):
+		"""
+		Return:
+		{
+		"CodeableConcept": [
+		                { element_name: "CodeableConcept.coding", fhir_datatype: "Coding", ... },
+		                { element_name: "CodeableConcept.text",   fhir_datatype: "string", ... },
+		                ...
+		],
+		"Identifier": [ ... ],
+		...
+		}
+		"""
+
+		cache = frappe.cache()
+		cached = cache.get_value("fhir_datatype_elements_index")
+		if cached:
+			return cached
+
+		index = {}
+
+		element_rows = frappe.get_all(
+			"FHIR Datatype Element",
+			fields=[
+				"name",
+				"parent",
+				"element_name",
+				"fhir_datatype",
+				"is_choice_type",
+				"min",
+				"max",
+				"short",
+				"definition",
+				"valueset_url",
+				"binding_strength",
+				"target_profiles",
+			],
+		)
+
+		for row in element_rows:
+			datatype_name = row.get("parent")
+			if not datatype_name:
+				continue
+
+			if datatype_name not in index:
+				index[datatype_name] = []
+
+			index[datatype_name].append(row)
+
+		cache.set_value("fhir_datatype_elements_index", index)
+		return index
+
+	@frappe.whitelist()
+	def overlay_structure_definitions(self):
+		overlay_map = self.build_structure_definition_overlay()
+		self.populate_element_map_from_overlay(overlay_map)
+
+		self.save(ignore_permissions=True)
+
+		return [overlay_map[path] for path in sorted(overlay_map.keys())]
+
+	def apply_most_restrictive_element(self, current_element, incoming_element):
+		result = dict(current_element)
+
+		result["min"] = self.choose_higher_min(
+			current_element.get("min"),
+			incoming_element.get("min"),
+		)
+
+		result["max"] = self.choose_lower_max(
+			current_element.get("max"),
+			incoming_element.get("max"),
+		)
+
+		result["binding_strength"] = self.choose_stricter_binding(
+			current_element.get("binding_strength"),
+			incoming_element.get("binding_strength"),
+		)
+
+		result["fhir_datatype"] = self.intersect_datatypes(
+			current_element.get("fhir_datatype"),
+			incoming_element.get("fhir_datatype"),
+			element_path=current_element.get("fhir_path") or current_element.get("path"),
+		)
+
+		for fieldname in (
+			"short",
+			"definition",
+			"valueset_url",
+			"target_profiles",
+		):
+			incoming_value = incoming_element.get(fieldname)
+			current_value = current_element.get(fieldname)
+			result[fieldname] = incoming_value or current_value
+
+		if incoming_element.get("source_structure_definition"):
+			result["source_structure_definition"] = incoming_element["source_structure_definition"]
+
+		return result
+
+	def choose_higher_min(self, current_min, incoming_min):
+		try:
+			current_value = int(current_min or 0)
+			incoming_value = int(incoming_min or 0)
+			return max(current_value, incoming_value)
+		except Exception:
+			return incoming_min or current_min
+
+	def choose_lower_max(self, current_max, incoming_max):
+		if current_max == "0" or incoming_max == "0":
+			return "0"
+
+		if current_max == "*" and incoming_max:
+			return incoming_max
+
+		if incoming_max == "*" and current_max:
+			return current_max
+
+		try:
+			current_value = int(current_max)
+			incoming_value = int(incoming_max)
+			return str(min(current_value, incoming_value))
+		except Exception:
+			return incoming_max or current_max
+
+	def choose_stricter_binding(self, current_binding, incoming_binding):
+		order = ["example", "preferred", "extensible", "required"]
+
+		if not current_binding:
+			return incoming_binding
+		if not incoming_binding:
+			return current_binding
+
+		try:
+			current_index = order.index(current_binding)
+		except ValueError:
+			current_index = -1
+
+		try:
+			incoming_index = order.index(incoming_binding)
+		except ValueError:
+			incoming_index = -1
+
+		if current_index == -1 and incoming_index == -1:
+			return incoming_binding or current_binding
+
+		if incoming_index >= current_index:
+			return incoming_binding
+
+		return current_binding
+
+	def intersect_datatypes(self, current_datatype, incoming_datatype, element_path=None):
+		if not current_datatype and not incoming_datatype:
+			return None
+
+		if not current_datatype:
+			return incoming_datatype
+
+		if not incoming_datatype:
+			return current_datatype
+
+		current_set = {value.strip() for value in current_datatype.split(",") if value and value.strip()}
+		incoming_set = {
+			value.strip() for value in incoming_datatype.split(",") if value and value.strip()
+		}
+
+		common = current_set.intersection(incoming_set)
+
+		if not common:
+			message = "FHIR datatype conflict while overlaying StructureDefinitions"
+			if element_path:
+				message += " at element {0}".format(element_path)
+			message += ": {0} vs {1}".format(current_datatype, incoming_datatype)
+
+			frappe.throw(message, title="Invalid FHIR StructureDefinition Overlay")
+
+		return ",".join(sorted(common))
+
+	def populate_element_map_from_overlay(self, overlay_map):
+		"""
+		Rebuild element_map rows from the overlay:
+
+		- One row per element path in overlay_map
+		- Structural fields are taken from overlay
+		- Mapping fields (frappe_field, fixed_value, default_value, pattern_value)
+		  are preserved when the same path already existed
+		- Paths no longer present in overlay are dropped
+		"""
+
+		previous_rows_by_path = {}
+
+		for row in self.map or []:
+			if row.fhir_path:
+				previous_rows_by_path[row.fhir_path] = row.as_dict()
+
+		self.set("map", [])
+
+		for element_path in sorted(overlay_map.keys()):
+			meta = overlay_map[element_path] or {}
+			previous = previous_rows_by_path.get(element_path) or {}
+
+			row_data = {}
+
+			row_data["fhir_path"] = element_path
+			row_data["datatype"] = meta.get("fhir_datatype") or meta.get("datatype")
+			row_data["fhir_datatype"] = meta.get("fhir_datatype") or meta.get("datatype")
+			row_data["is_choice_type"] = (
+				True if row_data.get("datatype") and "," in row_data.get("datatype") else False
+			)
+			row_data["min"] = meta.get("min")
+			row_data["max"] = meta.get("max")
+			row_data["binding_strength"] = meta.get("binding_strength")
+			row_data["short"] = meta.get("short")
+			row_data["definition"] = meta.get("definition")
+			row_data["valueset_url"] = meta.get("valueset_url")
+			row_data["target_profiles"] = meta.get("target_profiles")
+			row_data["is_required"] = int(meta.get("min") or 0) > 0
+
+			for fieldname in (
+				"frappe_field",
+				"fixed_value",
+				"default_value",
+				"pattern_value",
+			):
+				row_data[fieldname] = previous.get(fieldname)
+
+			self.append("map", row_data)
+
+	# Validations
+	def validate_element_map(self):
+		overlay_map = self.get_overlay_map()
+
+		if not overlay_map:
+			frappe.throw("Cannot validate mapping without StructureDefinition overlay")
+
+		paths_seen = set()
+
+		for row in self.map or []:
+			if not row.fhir_path:
+				frappe.throw("FHIR path is mandatory in FHIR Resource Element Map")
+
+			if row.fhir_path in paths_seen:
+				frappe.throw("Duplicate mapping for FHIR path: {0}".format(row.fhir_path))
+
+			paths_seen.add(row.fhir_path)
+
+			self.validate_single_mapping_row(row, overlay_map.get(row.fhir_path))
+
+		self.validate_required_elements_mapped(overlay_map, paths_seen)
+
+	def get_primitive_datatype_names(self):
+		names = frappe.get_all(
+			"FHIR Datatype",
+			filters={"is_primitive": 1},
+			pluck="name",
+		)
+		return set(names)
+
+	def is_primitive_datatype_name(self, datatype_name):
+		if not datatype_name:
+			return False
+		primitive_names = self.get_primitive_datatype_names()
+		return datatype_name in primitive_names
+
+	def validate_single_mapping_row(self, row, overlay_meta):
+		if not overlay_meta:
+			return  # if row not in overlaying profile
+
+		errors = []
+		max_cardinality = str(overlay_meta.get("max") or "").strip()
+		if max_cardinality == "0":
+			errors.append("Cannot map forbidden element {0} (max=0 in profile)".format(row.fhir_path))
+
+		if overlay_meta.get("binding_strength") == "required" and not overlay_meta.get("valueset_url"):
+			errors.append(
+				"Element {0} has binding_strength='required' but no ValueSet URL".format(row.fhir_path)
+			)
+
+		if row.min and int(row.min) > 0:
+			if self.is_primitive_datatype_name(row.datatype):
+				if not any(
+					[
+						row.frappe_field,
+						row.fixed_value,
+						row.default_value,
+						row.pattern_value,
+					]
+				):
+					errors.append("Required element {0} has no value source in mapping".format(row.fhir_path))
+
+		element_path = overlay_meta.get("fhir_path") or overlay_meta.get("path")
+		if element_path and "[x]" in element_path:
+			if not row.fhir_datatype:
+				errors.append(
+					"Choice element {0} must select a concrete datatype in mapping".format(row.fhir_path)
+				)
+
+			allowed_datatypes = set()
+			if overlay_meta.get("fhir_datatype"):
+				allowed_datatypes = {
+					value.strip() for value in overlay_meta["fhir_datatype"].split(",") if value and value.strip()
+				}
+
+			selected_datatypes = {
+				value.strip() for value in row.datatype.split(",") if value and value.strip()
 			}
 
-		apply_element_overlay(effective_elements[path], element)
+			if allowed_datatypes and not selected_datatypes.issubset(allowed_datatypes):
+				errors.append(
+					"Mapped datatype(s) {0} for {1} are not allowed by StructureDefinition ({2})".format(
+						", ".join(sorted(selected_datatypes)),
+						row.fhir_path,
+						", ".join(sorted(allowed_datatypes)),
+					)
+				)
 
+		if overlay_meta.get("target_profiles"):
+			datatype = row.fhir_datatype or overlay_meta.get("fhir_datatype") or ""
+			datatype_values = {value.strip() for value in datatype.split(",") if value and value.strip()}
+			if "Reference" not in datatype_values:
+				errors.append(
+					"Element {0} has targetProfile but mapped datatype is not Reference".format(row.fhir_path)
+				)
+		if errors:
+			msg = "\n".join(errors)
+			# frappe.log_error(message=msg, title=_("Mapping Errors"))
+			frappe.msgprint(msg)
 
-def apply_element_overlay(effective_element, overlay_element):
-	overlay_minimum = get_int(getattr(overlay_element, "min", None))
-	if overlay_minimum is not None:
-		if effective_element["min"] is None:
-			effective_element["min"] = overlay_minimum
-		else:
-			effective_element["min"] = max(effective_element["min"], overlay_minimum)
+	def validate_required_elements_mapped(self, overlay_map, mapped_paths):
+		required_unmapped = []
 
-	overlay_maximum_raw = getattr(overlay_element, "max", None)
-	overlay_maximum = get_maximum_value(overlay_maximum_raw)
-	if overlay_maximum is not None:
-		if overlay_maximum == "0":
-			effective_element["max"] = "0"
-			effective_element["is_removed"] = True
-		else:
-			if effective_element["max"] is None:
-				effective_element["max"] = overlay_maximum
-			else:
-				effective_element["max"] = more_restrictive_maximum(effective_element["max"], overlay_maximum)
+		for path, meta in overlay_map.items():
+			datatype_name = (meta.get("datatype") or "").strip()
+			if not self.is_primitive_datatype_name(datatype_name):
+				continue  # enforce mapping for primitive required elements
 
-	overlay_type_codes = get_element_type_codes(overlay_element)
-	if overlay_type_codes:
-		if effective_element["type_codes"]:
-			intersection = effective_element["type_codes"].intersection(overlay_type_codes)
-			if intersection:
-				effective_element["type_codes"] = intersection
-			else:
-				effective_element["type_codes"] = overlay_type_codes
-		else:
-			effective_element["type_codes"] = overlay_type_codes
+			try:
+				min_value = int(meta.get("min") or 0)
+			except Exception:
+				min_value = 0
 
-	overlay_binding_strength = getattr(overlay_element, "binding_strength", None)
-	if overlay_binding_strength:
-		effective_element["binding_strength"] = stronger_binding_strength(
-			effective_element["binding_strength"], overlay_binding_strength
-		)
-		overlay_valueset_url = getattr(overlay_element, "valueset_url", None)
-		if overlay_valueset_url and effective_element["binding_strength"] == overlay_binding_strength:
-			effective_element["valueset_url"] = overlay_valueset_url
+			if min_value > 0 and path not in mapped_paths:
+				required_unmapped.append(path)
 
-	overlay_must_support = getattr(overlay_element, "is_required", None)
-	if overlay_must_support:
-		effective_element["is_required"] = True
-
-	overlay_short = getattr(overlay_element, "short", None)
-	if overlay_short:
-		effective_element["short"] = overlay_short
-
-	overlay_definition = getattr(overlay_element, "definition", None)
-	if overlay_definition:
-		effective_element["definition"] = overlay_definition
-
-	if overlay_maximum_raw is not None and is_removed(overlay_maximum_raw):
-		effective_element["is_removed"] = True
-
-
-def cleanup_effective_elements(effective_elements):
-	paths_to_delete = []
-
-	for path, element in effective_elements.items():
-		if element.get("is_removed"):
-			paths_to_delete.append(path)
-			continue
-
-		if element.get("max") == "0":
-			paths_to_delete.append(path)
-			continue
-
-		type_codes = element.get("type_codes")
-		if type_codes is not None and len(type_codes) == 0:
-			paths_to_delete.append(path)
-			continue
-
-	print(f"Deleting {len(paths_to_delete)}")
-	for path in paths_to_delete:
-		effective_elements.pop(path, None)
-
-
-def get_element_path(element):
-	for attribute in ("fhir_path", "path", "element_path"):
-		value = getattr(element, attribute, None)
-		if value:
-			return value
-	return None
-
-
-def get_element_type_codes(element):
-	raw_type_codes = getattr(element, "fhir_datatype", None) or getattr(element, "datatype", None)
-
-	if not raw_type_codes:
-		return set()
-
-	if isinstance(raw_type_codes, str):
-		if "," in raw_type_codes:
-			parts = [value.strip() for value in raw_type_codes.split(",") if value.strip()]
-			return set(parts)
-		return {raw_type_codes.strip()}
-
-	try:
-		iterable = list(raw_type_codes)
-	except TypeError:
-		return set()
-
-	values = set()
-	for item in iterable:
-		if isinstance(item, str):
-			value = item.strip()
-		else:
-			value = getattr(item, "code", None) or getattr(item, "type_code", None)
-		if value:
-			values.add(value)
-
-	return values
-
-
-def more_restrictive_maximum(current, new):
-	if current == "0" or new == "0":
-		return "0"
-
-	if current == "*":
-		return new
-
-	if new == "*":
-		return current
-
-	try:
-		current_value = int(current)
-		new_value = int(new)
-	except ValueError:
-		return new
-
-	return str(min(current_value, new_value))
-
-
-def stronger_binding_strength(current, new):
-	order = {
-		None: 0,
-		"example": 1,
-		"preferred": 2,
-		"extensible": 3,
-		"required": 4,
-	}
-
-	current_score = order.get(current, 0)
-	new_score = order.get(new, 0)
-
-	if new_score >= current_score:
-		return new
-
-	return current if current is not None else new
-
-
-def get_int(value):
-	if value is None:
-		return None
-	try:
-		return int(value)
-	except (TypeError, ValueError):
-		return None
-
-
-def get_maximum_value(value):
-	if value is None:
-		return None
-	if isinstance(value, str):
-		value = value.strip()
-		return value or None
-	return str(value)
-
-
-def is_removed(maximum_value):
-	if maximum_value is None:
-		return False
-	if isinstance(maximum_value, str):
-		return maximum_value.strip() == "0"
-	try:
-		return int(maximum_value) == 0
-	except (TypeError, ValueError):
-		return False
+		if required_unmapped:
+			frappe.throw(
+				"Required FHIR elements are not mapped: {0}".format(", ".join(sorted(required_unmapped)))
+			)
