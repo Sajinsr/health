@@ -1,22 +1,12 @@
 # Copyright (c) 2025, earthians Health Informatics Pvt. Ltd. and contributors
 # For license information, please see license.txt
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 from healthcare.interoperability.fhir_engine.fhir_generator import generate_fhir_resource
 from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
-
-# from healthcare.interoperability.fhir_engine.fhir_resource_generator import (
-# 	generate_fhir_resource_from_map,
-# )
-# from healthcare.interoperability.fhir_engine.fhir_builder import FHIRResourceBuilder
-# from healthcare.interoperability.utils.fhir_transformer import FHIRResourceTransformer
-# from healthcare.interoperability.fhir_engine.fhir_resource_generator import FHIRResourceGenerator
-
-
-REQUIRED_BINDING = "required"
 
 
 class FHIRResourceMap(Document):
@@ -46,7 +36,7 @@ class FHIRResourceMap(Document):
 			# if el.get("max") == "*" and el.get("frappe_field"):
 			# 	df = frappe.get_meta(self.frappe_doctype).get_field(el.get("frappe_field"))
 			# 	is_child_table = df and df.fieldtype == "Table"
-
+			#
 			# 	if not is_child_table:
 			# 		frappe.throw(
 			# 			f"FHIR element '{el.get('fhir_path')}' is repeating (max='*'), "
@@ -103,6 +93,27 @@ class FHIRResourceMap(Document):
 		resource_json = generator.generate()
 		return resource_json
 
+	@frappe.whitelist()
+	def overlay_structure_definitions(self, max_datatype_depth=2):
+		"""
+		Build overlay + populate element map.
+		"""
+		max_depth = None
+		if max_datatype_depth is not None:
+			try:
+				max_depth = cint(max_datatype_depth)
+			except Exception:
+				max_depth = None
+
+		overlay_map = self.build_structure_definition_overlay(
+			max_datatype_depth=max_depth,
+		)
+		self.populate_element_map_from_overlay(overlay_map)
+
+		self.save(ignore_permissions=True)
+
+		return [overlay_map[path] for path in sorted(overlay_map.keys())]
+
 	def get_structure_definition_names(self):
 		names = []
 
@@ -119,10 +130,16 @@ class FHIRResourceMap(Document):
 		if hasattr(self, "_overlay_cache") and self._overlay_cache is not None:
 			return self._overlay_cache
 
+		# Default depth for internal use (e.g. validate_element_map)
 		self._overlay_cache = self.build_structure_definition_overlay()
 		return self._overlay_cache
 
-	def build_structure_definition_overlay(self, structure_definition_names=None):
+	def build_structure_definition_overlay(
+		self, structure_definition_names=None, max_datatype_depth=None
+	):
+		"""
+		Build overlay from base StructureDefinition + profiles.
+		"""
 		if not structure_definition_names:
 			structure_definition_names = self.get_structure_definition_names()
 
@@ -157,20 +174,33 @@ class FHIRResourceMap(Document):
 						current,
 						incoming,
 					)
-		overlay_by_path = self.expand_complex_datatypes(overlay_by_path)
+
+		overlay_by_path = self.expand_complex_datatypes(
+			overlay_by_path,
+			max_datatype_depth=max_datatype_depth,
+		)
 
 		return overlay_by_path
 
-	def expand_complex_datatypes(self, overlay_map):
+	def expand_complex_datatypes(self, overlay_map, max_datatype_depth=None):
 		"""
 		Take an overlay_map { fhir_path -> meta } and expand complex datatypes
 		using FHIR Datatype Element definitions.
-
-		Guarantees termination by:
-		- Not expanding known recursive/meta-ish types (Extension, Element, etc.)
-		- Tracking datatype ancestry per path and skipping recursive cycles
-		- Enforcing a max datatype nesting depth per path
 		"""
+
+		# Interpret depth
+		if max_datatype_depth is not None:
+			try:
+				max_datatype_depth = int(max_datatype_depth)
+			except Exception:
+				max_datatype_depth = None
+
+		if max_datatype_depth is not None and max_datatype_depth <= 0:
+			# Explicitly disable expansion
+			return overlay_map
+
+		if max_datatype_depth is None:
+			max_datatype_depth = 2
 
 		datatype_elements_by_type = self.get_datatype_elements_index()
 		primitive_datatypes = self.get_primitive_datatype_names()
@@ -178,18 +208,16 @@ class FHIRResourceMap(Document):
 		NON_EXPANDING_TYPES = {
 			"Extension",
 			"Element",
-			"BackboneElement",  # optional, remove if you *want* to expand it
+			"BackboneElement",  # optional, remove if you want to expand it
 			"Narrative",
 			"Resource",
 			"ElementDefinition",
 			"xhtml",
 		}
 
-		MAX_DATATYPE_DEPTH = 2  # TODO prompt user
-
-		# Seed ancestry + depth for existing overlay entries (from StructureDefinitions)
+		# seed ancestry + depth for existing overlay entries (from StructureDefinitions)
 		for path, meta in overlay_map.items():
-			datatype = meta.get("fhir_datatype") or meta.get("datatype")
+			datatype = meta.get("datatype")
 			if datatype:
 				meta["_datatype_ancestry"] = [datatype]
 				meta["_datatype_depth"] = 1
@@ -224,29 +252,28 @@ class FHIRResourceMap(Document):
 					depth = len(ancestry) or 0
 
 				# Hard-limit nesting depth per path
-				if depth >= MAX_DATATYPE_DEPTH:
+				if depth >= max_datatype_depth:
 					continue
 
 				for element in elements:
-					# Try multiple possible fields, depending on how you stored them
 					element_name = element.get("element_name") or element.get("fhir_path") or element.get("path")
 					if not element_name:
 						continue
 
-					# Root row "CodeableConcept" etc – skip
+					# root row "CodeableConcept" etc – skip
 					if element_name == datatype:
 						continue
 
-					# Expect "CodeableConcept.coding", "CodeableConcept.coding.code", etc.
+					# expect "CodeableConcept.coding", "CodeableConcept.coding.code", etc.
 					if not element_name.startswith(datatype + "."):
-						# If your datatype elements are stored as suffixes ("coding.code"),
+						# if datatype elements are stored as suffixes ("coding.code"),
 						# then adjust this block to prepend datatype before checking.
 						continue
 
 					suffix = element_name[len(datatype) + 1 :]
 					expanded_path = f"{parent_path}.{suffix}"
 
-					# Skip if we already have this path
+					# skip if we already have this path
 					if expanded_path in overlay_map or expanded_path in new_entries:
 						continue
 
@@ -272,8 +299,7 @@ class FHIRResourceMap(Document):
 						child_depth = depth + 1
 						child_meta["_datatype_depth"] = child_depth
 
-						if child_depth > MAX_DATATYPE_DEPTH:
-							# Do not add; would exceed depth limit
+						if child_depth > max_datatype_depth:
 							continue
 
 					if not child_meta.get("source_structure_definition"):
@@ -283,7 +309,6 @@ class FHIRResourceMap(Document):
 
 			if new_entries:
 				if len(overlay_map) + len(new_entries) > 20000:
-					# dump a sample so you can see the pattern
 					sample_keys = list(new_entries.keys())[:20]
 					frappe.log_error(
 						message="\n".join(sample_keys),
@@ -297,13 +322,13 @@ class FHIRResourceMap(Document):
 		"""
 		Return:
 		{
-		"CodeableConcept": [
-		                { element_name: "CodeableConcept.coding", fhir_datatype: "Coding", ... },
-		                { element_name: "CodeableConcept.text",   fhir_datatype: "string", ... },
-		                ...
-		],
-		"Identifier": [ ... ],
-		...
+		        "CodeableConcept": [
+		                        { element_name: "CodeableConcept.coding", fhir_datatype: "Coding", ... },
+		                        { element_name: "CodeableConcept.text",   fhir_datatype: "string", ... },
+		                        ...
+		        ],
+		        "Identifier": [ ... ],
+		        ...
 		}
 		"""
 
@@ -344,15 +369,6 @@ class FHIRResourceMap(Document):
 
 		cache.set_value("fhir_datatype_elements_index", index)
 		return index
-
-	@frappe.whitelist()
-	def overlay_structure_definitions(self):
-		overlay_map = self.build_structure_definition_overlay()
-		self.populate_element_map_from_overlay(overlay_map)
-
-		self.save(ignore_permissions=True)
-
-		return [overlay_map[path] for path in sorted(overlay_map.keys())]
 
 	def apply_most_restrictive_element(self, current_element, incoming_element):
 		result = dict(current_element)
@@ -521,7 +537,26 @@ class FHIRResourceMap(Document):
 
 			self.append("map", row_data)
 
-	# Validations
+	def get_primitive_datatype_names(self):
+		cache = frappe.cache()
+		cached = cache.get_value("fhir_primitive_datatype_names")
+		if cached:
+			return set(cached)
+
+		names = frappe.get_all(
+			"FHIR Datatype",
+			filters={"is_primitive": 1},
+			pluck="name",
+		)
+		cache.set_value("fhir_primitive_datatype_names", names)
+		return set(names)
+
+	def is_primitive_datatype_name(self, datatype_name):
+		if not datatype_name:
+			return False
+		primitive_names = self.get_primitive_datatype_names()
+		return datatype_name in primitive_names
+
 	def validate_element_map(self):
 		overlay_map = self.get_overlay_map()
 
@@ -542,20 +577,6 @@ class FHIRResourceMap(Document):
 			self.validate_single_mapping_row(row, overlay_map.get(row.fhir_path))
 
 		self.validate_required_elements_mapped(overlay_map, paths_seen)
-
-	def get_primitive_datatype_names(self):
-		names = frappe.get_all(
-			"FHIR Datatype",
-			filters={"is_primitive": 1},
-			pluck="name",
-		)
-		return set(names)
-
-	def is_primitive_datatype_name(self, datatype_name):
-		if not datatype_name:
-			return False
-		primitive_names = self.get_primitive_datatype_names()
-		return datatype_name in primitive_names
 
 	def validate_single_mapping_row(self, row, overlay_meta):
 		if not overlay_meta:
@@ -616,9 +637,9 @@ class FHIRResourceMap(Document):
 				errors.append(
 					"Element {0} has targetProfile but mapped datatype is not Reference".format(row.fhir_path)
 				)
+
 		if errors:
 			msg = "\n".join(errors)
-			# frappe.log_error(message=msg, title=_("Mapping Errors"))
 			frappe.msgprint(msg)
 
 	def validate_required_elements_mapped(self, overlay_map, mapped_paths):
