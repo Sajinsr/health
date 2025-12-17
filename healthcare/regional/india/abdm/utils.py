@@ -252,7 +252,7 @@ def request_and_post(
 			method=method,
 			url=url,
 			headers=headers,
-			data=json.dumps(payload) or None,
+			data=json.dumps(payload) if payload else None,
 		)
 
 		try:
@@ -926,7 +926,7 @@ def on_request(
 		if not auth_token or not auth_token.get("accessToken"):
 			frappe.throw("Unable to fetch valid access token for HIE-CM.")
 
-		config = get_url("on_notify")
+		config = get_url("on_request")
 		url = settings.consent_base_url.rstrip("/") + config.get("url")
 
 		auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""

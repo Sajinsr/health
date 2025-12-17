@@ -121,6 +121,16 @@ config = {
 		"url": "/api/hiecm/consent/v3/request/hip/on-notify",
 		"encrypted": False,
 	},
+	"on_request": {
+		"method": "POST",
+		"url": "/api/hiecm/data-flow/v3/health-information/hip/on-request",
+		"encrypted": False,
+	},
+	"data_flow_on_notify": {
+		"method": "POST",
+		"url": "/api/hiecm/data-flow/v3/health-information/notify",
+		"encrypted": False,
+	},
 }
 
 
