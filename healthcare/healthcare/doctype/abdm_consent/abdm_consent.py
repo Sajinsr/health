@@ -1,105 +1,118 @@
 # Copyright (c) 2025, earthians Health Informatics Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from datetime import datetime, timedelta
-
+import base64
+import hashlib
 import json
-import os
+import uuid
+from datetime import datetime
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import format_datetime
 
+from healthcare.regional.india.abdm.abdm_config import get_url
 from healthcare.regional.india.abdm.utils import (
 	generate_unique_id,
 	get_abdm_settings,
 	get_token_for_hiecm,
+	request_and_post,
 )
-
-import base64
-
-from cryptography.hazmat.primitives.asymmetric import x25519
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes, serialization
-
 
 
 class ABDMConsent(Document):
 	def validate(self):
 		if self.data_push_url and self.key_material and self.transaction_id:
-			settings = get_abdm_settings()
-			if not settings or not settings.consent_base_url:
-				frappe.throw(
-					title="Configuration Missing",
-					msg="Consent Management Base URL not configured in ABDM Settings.",
-				)
+			headers = {"Content-Type": "application/json"}
 
-			# auth_token = get_token_for_hiecm()
-
-			# if not auth_token or not auth_token.get("accessToken"):
-			# 	frappe.throw(
-			# 		title="Unable to fetch valid access token",
-			# 		msg=f"Consent Management Base URL not configured in ABDM Settings.<br><br>Traceback: {auth_token.get('traceback')}",
-			# 	)
-
-			# auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""
-			# authorization = auth_prefix + auth_token.get("accessToken")
-
-			# headers = {
-			# 	"Content-Type": "application/json",
-			# 	"REQUEST-ID": generate_unique_id(),
-			# 	"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
-			# 	"X-CM-ID": settings.x_cm_id,
-			# 	"Authorization": authorization,
-			# }
+			entries, keyMaterial = self.build_entries()
 
 			payload = {
 				"pageNumber": 0,
 				"pageCount": 1,
 				"transactionId": self.transaction_id,
-				"entries": self.build_entries(),
-				# "keyMaterial": self.get_key_material(),
+				"entries": entries,
+				"keyMaterial": keyMaterial,
 			}
+
+			frappe.log_error(message=payload, title="Data push-Payload")
+
+			response = request_and_post(
+				self.data_push_url,
+				payload,
+				headers,
+				"POST",
+				"Calling Data push URL",
+				frappe.db.exists("Patient", {"abha_address": self.abha_address}),
+			)
+
+			sessionStatus = "FAILED"
+			hiStatus = "ERRORED"
+
+			if not response.get("traceback") and response in ["", None]:
+				sessionStatus = "TRANSFERRED"
+				hiStatus = "OK"
+
+			send_dataflow_notify(self.consent_id, self.transaction_id, sessionStatus, hiStatus)
 
 	def build_entries(self):
 		"""
 		[
-			{
-				"content": "Encrypted content of data packaged in FHIR bundle",
-				"media": "mimetype of the content.",
-				"checksum": "string",
-				"careContextReference": "1931-nd2"
-			}
+		        {
+		                "content": "Encrypted content of data packaged in FHIR bundle",
+		                "media": "application/fhir+json",
+		                "checksum": "string",
+		                "careContextReference": "1931-nd2"
+		        }
 		]
 		"""
 
+		entries = []
+		keyMaterial = {}
 		if self.care_contexts:
 			care_contexts = json.loads(self.care_contexts or "{}")
 			consent_detail = json.loads(self.consent_detail or "{}")
 			hi_types = consent_detail.get("hiTypes") or []
 
-			documents_details = []
 			for item in care_contexts:
 				details = get_document_details(item, hi_types)
 
 				if details:
-					documents_details.append(details)
+					bundle = get_bundle(details)
+					checksum = generate_checksum(bundle)
+					if bundle:
+						encypted_bundle = get_encrypted_bundle(bundle, self.key_material)
+						entries.append(
+							{
+								"content": encypted_bundle.get("ciphertext"),
+								"media": "application/fhir+json",
+								"checksum": checksum,
+								"careContextReference": item.get("careContextReference"),
+							}
+						)
+						keyMaterial = self.key_material
+						if isinstance(keyMaterial, str):
+							keyMaterial = json.loads(keyMaterial)
 
-			bundle = {}
-			if documents_details:
-				bundle = build_fhir_bundle(documents_details)
+						keyMaterial["dhPublicKey"]["keyValue"] = encypted_bundle.get("senderPublicKey")
+						keyMaterial["nonce"] = encypted_bundle.get("nonce")
 
-			print("\n\n\n111", bundle)
-
-			encrypted_bundle_details = None
-			if self.key_material:
-				encrypted_bundle_details = get_encrypted_bundle(bundle, self.key_material)
-
-			if encrypted_bundle_details:
-				print("\n\n2222", encrypted_bundle_details)
+		if entries:
+			return entries, keyMaterial
 
 
+def generate_checksum(bundle):
+	plaintext = json.dumps(bundle, separators=(",", ":")).encode("utf-8")
+	sha = hashlib.sha256(plaintext).digest()
+	return base64.b64encode(sha).decode()
 
-def get_document_details(item, hi_types=[]):
+
+def get_document_details(item, hi_types):
 	item_ref = item.get("careContextReference")
 
 	if not item_ref:
@@ -129,396 +142,252 @@ def get_document_details(item, hi_types=[]):
 
 	doc_details = {}
 	for type in hi_types:
-		doc_exists = frappe.db.exists(doctype_map[type], item_ref)
+		if type != "ImmunizationRecord":
+			doc_exists = frappe.db.exists(doctype_map[type], item_ref)
 
-		if doc_exists:
-			doc_details.update({"doctype": doctype_map[type], "docname": item_ref})
-			break
+			if doc_exists:
+				doc_details.update({"doctype": doctype_map[type], "docname": item_ref})
+				break
 
 	return doc_details
 
 
-def build_fhir_bundle(documents_details):
-	"""
-	Builds a FHIR Bundle for given document details
-	Args:
-		documents_details: List of dicts with `doctype` and `docname`
-	Returns:
-		dict: FHIR Bundle object (ready for encryption)
-	"""
-
-	from frappe.utils import get_url
-
-	bundle = {
-		"resourceType": "Bundle",
-		"type": "document",
-		"identifier": {"system": get_url(), "value": generate_unique_id()},
-		"timestamp": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
-		"entry": [],
-	}
-
-	for item in documents_details:
-		doc = frappe.get_doc(item.get("doctype"), item.get("docname"))
-
-		resource_data = get_resource(doc)
-		entries = []
-		if resource_data:
-			entries.append(resource_data)
-		bundle["entry"] = entries
+def get_bundle(item):
+	bundle = {}
+	if item.get("doctype") == "Patient Encounter":
+		bundle = make_op_consultation_resource(item)
 
 	return bundle
 
 
-def get_resource(doc):
-	data = {}
-	if doc.doctype == "Patient Encounter":
-		data = generate_fhir_composition(doc.name)
-	# data = {
-	# 	"fullUrl": "urn:uuid:HLC-ENC-2025-00014",
-	# 	"resource": {
-	# 		"resourceType": "Composition",
-	# 		"id": "HLC-ENC-2025-00014",
-	# 		"meta": {
-	# 			"versionId": "1",
-	# 			"lastUpdated": "2025-10-27T15:33:06+05:30",
-	# 			"profile": ["https://nrces.in/ndhm/fhir/r4/StructureDefinition/OPConsultRecord"],
-	# 		},
-	# 		"language": "en-IN",
-	# 		"identifier": {"system": "https://ndhm.in/phr", "value": "HLC-ENC-2025-00014"},
-	# 		"status": "final",
-	# 		"type": {
-	# 			"coding": [
-	# 				{
-	# 					"system": "http://snomed.info/sct",
-	# 					"code": "371530004",
-	# 					"display": "Clinical consultation report",
-	# 				}
-	# 			],
-	# 			"text": "Clinical Consultation report",
-	# 		},
-	# 		"subject": {"reference": "urn:uuid:patient-sajin", "display": "Sajin"},
-	# 		"encounter": {"reference": "urn:uuid:HLC-ENC-2025-00014", "display": "Encounter"},
-	# 		"date": "2025-10-27T15:33:06+05:30",
-	# 		"author": [
-	# 			{"reference": "urn:uuid:HLC-PRAC-2020-00002", "display": "Dr. Rucha Mahabal"}
-	# 		],
-	# 		"title": "Consultation Report",
-	# 		"custodian": {"reference": "urn:uuid:CH-Centre", "display": "CH Centre"},
-	# 		"section": [
-	# 			{
-	# 				"title": "Chief complaints",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "422843007",
-	# 							"display": "Chief complaint section",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [{"reference": "urn:uuid:symptom-cold", "display": "Cold"}],
-	# 			},
-	# 			{
-	# 				"title": "Medical History",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "371529009",
-	# 							"display": "History and physical report",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [{"reference": "urn:uuid:diagnosis-covid19", "display": "COVID-19"}],
-	# 			},
-	# 			{
-	# 				"title": "Investigation Advice",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "721963009",
-	# 							"display": "Order document",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [
-	# 					{"reference": "urn:uuid:labtest-lipidprofile", "display": "LIPID PROFILE"},
-	# 					{
-	# 						"reference": "urn:uuid:labtest-cbc",
-	# 						"display": "Complete Blood Count (CBC)",
-	# 					},
-	# 				],
-	# 			},
-	# 			{
-	# 				"title": "Medications",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "721912009",
-	# 							"display": "Medication summary document",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [
-	# 					{
-	# 						"reference": "urn:uuid:medication-aceclofenac",
-	# 						"display": "Aceclofenac 100mg Tablet, 0-0-1 for 1 Day",
-	# 					},
-	# 					{
-	# 						"reference": "urn:uuid:medication-azythromycin",
-	# 						"display": "Azythromycin 100mg Tablet, 1-1-1 for 2 Day",
-	# 					},
-	# 				],
-	# 			},
-	# 			{
-	# 				"title": "Procedure",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "371525003",
-	# 							"display": "Clinical procedure report",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [{"reference": "urn:uuid:procedure-covid19", "display": "Covid 19"}],
-	# 			},
-	# 			{
-	# 				"title": "Therapies",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://snomed.info/sct",
-	# 							"code": "736271009",
-	# 							"display": "Outpatient care plan",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [
-	# 					{
-	# 						"reference": "urn:uuid:therapy-upperlimb",
-	# 						"display": "Intensive Upper Limb Training - 2 sessions",
-	# 					},
-	# 					{
-	# 						"reference": "urn:uuid:therapy-rehab",
-	# 						"display": "Rehab Foundation - 3 sessions",
-	# 					},
-	# 				],
-	# 			},
-	# 			{
-	# 				"title": "Codification Table",
-	# 				"code": {
-	# 					"coding": [
-	# 						{
-	# 							"system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-	# 							"code": "CPT4",
-	# 							"display": "Current Procedural Terminology",
-	# 						}
-	# 					]
-	# 				},
-	# 				"entry": [
-	# 					{
-	# 						"reference": "urn:uuid:codification-cpt4",
-	# 						"display": "Procedures - medical, surgical, and diagnostic services",
-	# 					}
-	# 				],
-	# 			},
-	# 		],
-	# 	},
-	# }
-
-	return data
-
-
-def generate_fhir_composition(encounter_id):
-	"""Generate FHIR Composition JSON from Patient Encounter"""
-	encounter = frappe.get_doc("Patient Encounter", encounter_id)
-
-	def urn(resource_type, name):
-		return f"urn:uuid:{resource_type}-{name.replace(' ', '').lower()}"
-
-	# Current timestamp in ISO format
-	last_updated = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+05:30")
-
-	# Base composition
-	composition = {
-		"fullUrl": f"urn:uuid:{encounter.name}",
-		"resource": {
-			"resourceType": "Composition",
-			"id": encounter.name,
-			"meta": {
-				"versionId": "1",
-				"lastUpdated": last_updated,
-				"profile": ["https://nrces.in/ndhm/fhir/r4/StructureDefinition/OPConsultRecord"],
-			},
-			"language": "en-IN",
-			"identifier": {"system": "https://ndhm.in/phr", "value": encounter.name},
-			"status": "final",
-			"type": {
-				"coding": [
-					{
-						"system": "http://snomed.info/sct",
-						"code": "371530004",
-						"display": "Clinical consultation report",
-					}
-				],
-				"text": "Clinical Consultation report",
-			},
-			"subject": {
-				"reference": urn("patient", encounter.patient_name),
-				"display": encounter.patient_name,
-			},
-			"encounter": {"reference": f"urn:uuid:{encounter.name}", "display": "Encounter"},
-			"date": last_updated,
-			"author": [
-				{
-					"reference": f"urn:uuid:{encounter.practitioner}",
-					"display": f"Dr. {encounter.practitioner_name}",
-				}
-			],
-			"title": "Consultation Report",
-			"custodian": {
-				"reference": urn("org", encounter.company),
-				"display": encounter.company,
-			},
-			"section": [],
-		},
-	}
-
-	# Helper to append section
+def make_op_consultation_resource(item):
 	def add_section(title, code, display, entries):
 		if entries:
 			section = {
 				"title": title,
-				"code": {
-					"coding": [
-						{"system": "http://snomed.info/sct", "code": code, "display": display}
-					]
-				},
+				"code": {"coding": [{"system": "http://snomed.info/sct", "code": code, "display": display}]},
 				"entry": entries,
 			}
-			composition["resource"]["section"].append(section)
+			section_entries.append(section)
+
+	doc = frappe.get_doc(item.get("doctype"), item.get("docname"))
+	author_ref = {
+		"reference": doc.get("practitioner"),
+		"display": doc.get("practitioner_name"),
+	}
+	subject_ref = {"reference": doc.get("patient"), "display": doc.get("patient_name")}
+	composition_type = [
+		{
+			"system": "https://ndhm.gov.in/sct",
+			"code": "440545006",
+			"display": "Prescription record",
+		}
+	]
+	encounter = {"reference": f"urn:uuid:Encounter/{doc.name}", "display": "Encounter"}
+	section_entries = []
 
 	# Chief complaints
-	complaints = [
-		{"reference": urn("symptom", s.complaint), "display": s.complaint}
-		for s in encounter.symptoms
-	]
+	complaints = [{"reference": f"urn:uuid:{s.name}", "display": s.complaint} for s in doc.symptoms]
 	add_section("Chief complaints", "422843007", "Chief complaint section", complaints)
 
 	# Diagnosis
-	diagnoses = [
-		{"reference": urn("diagnosis", d.diagnosis), "display": d.diagnosis}
-		for d in encounter.diagnosis
-	]
+	diagnoses = [{"reference": f"urn:uuid:{d.name}", "display": d.diagnosis} for d in doc.diagnosis]
 	add_section("Medical History", "371529009", "History and physical report", diagnoses)
 
 	# Lab Tests
 	labs = [
-		{"reference": urn("labtest", l.observation_template), "display": l.observation_template}
-		for l in encounter.lab_test_prescription
+		{"reference": f"urn:uuid:{l.name}", "display": l.observation_template}
+		for l in doc.lab_test_prescription
 	]
 	add_section("Investigation Advice", "721963009", "Order document", labs)
 
 	# Medications
 	meds = []
-	for m in encounter.drug_prescription:
-		display = f"{m.drug_name} {m.strength}{m.strength_uom} {m.dosage_form}, {m.dosage} for {m.period}"
-		meds.append({"reference": urn("medication", m.drug_name), "display": display})
+	for m in doc.drug_prescription:
+		display = (
+			f"{m.drug_name} {m.strength}{m.strength_uom} {m.dosage_form}, {m.dosage} for {m.period}"
+		)
+		meds.append({"reference": f"urn:uuid:{m.name}", "display": display})
 	add_section("Medications", "721912009", "Medication summary document", meds)
 
 	# Procedures
 	procedures = [
-		{"reference": urn("procedure", p.procedure_name), "display": p.procedure_name}
-		for p in encounter.procedure_prescription
+		{"reference": f"urn:uuid:{p.name}", "display": p.procedure_name}
+		for p in doc.procedure_prescription
 	]
 	add_section("Procedure", "371525003", "Clinical procedure report", procedures)
 
 	# Therapies
 	therapies = [
 		{
-			"reference": urn("therapy", t.therapy_type),
+			"reference": f"urn:uuid:{t.name}",
 			"display": f"{t.therapy_type} - {t.no_of_sessions} sessions",
 		}
-		for t in encounter.therapies
+		for t in doc.therapies
 	]
 	add_section("Therapies", "736271009", "Outpatient care plan", therapies)
 
-	# Codification
-	codes = [
-		{"reference": urn("codification", c.code), "display": c.definition or c.code_value}
-		for c in encounter.codification_table
-	]
-	add_section("Codification Table", "371530004", "Clinical consultation report", codes)
+	composition = make_composition(
+		doc.title, author_ref, subject_ref, section_entries, composition_type, encounter
+	)
 
-	return composition
+	resources = make_resources(doc)
+
+	identifier = {"system": "http://abdm.earthianslive.com", "value": doc.name}
+	return make_bundle(resources, composition, identifier, "document")
+
+
+def make_resources(doc):
+	resources = []
+	if doc.doctype == "Patient Encounter":
+		resources.append(make_encounter_resource(doc))
+
+		# if doc.drug_prescription:
+		# 	resources.append(make_drug_resources(doc.drug_prescription))
+
+	return resources
+
+
+def make_encounter_resource(doc):
+	enc_id = f"Encounter/{doc.name}"
+	resource = {
+		"resourceType": "Encounter",
+		"id": enc_id,
+		"meta": {
+			"lastUpdated": format_datetime(doc.modified, "yyyy-MM-ddTHH:mm:ss.SSS'+05:30'"),
+			"profile": ["https://nrces.in/ndhm/fhir/r4/StructureDefinition/Encounter"],
+		},
+		"text": {
+			"status": "generated",
+			"div": get_medical_record(doc),
+		},
+		"identifier": [{"system": "https://ndhm.in", "value": "S100"}],
+		"status": "finished",
+		"class": {
+			"system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+			"code": "AMB",
+			"display": "ambulatory",
+		},
+		"subject": {
+			"reference": f"urn:uuid:{doc.patient}",
+			"display": "Patient",
+		},
+		"period": {"start": f"{doc.encounter_date}T{doc.encounter_time}+05:30"},
+		"diagnosis": [],
+	}
+
+	for d in doc.diagnosis:
+		resource["diagnosis"].append(
+			{
+				"condition": {
+					"reference": f"urn:uuid:{d.name}",
+					"display": "Condition",
+				},
+				"use": {
+					"coding": [
+						{
+							"system": "http://snomed.info/sct",
+							"code": "39154008",
+							"display": "Clinical diagnosis",
+						}
+					]
+				},
+			}
+		)
+
+	return resource
+
+
+def get_medical_record(doc):
+	record = frappe.db.exists(
+		"Patient Medical Record", {"reference_doctype": doc.doctype, "reference_name": doc.name}
+	)
+
+	if record:
+		return frappe.db.get_value("Patient Medical Record", record, "subject")
 
 
 def get_encrypted_bundle(bundle, receiver_key_material):
-	return encrypt_fhir_resource(bundle, receiver_key_material)
-
-
-def generate_sender_key_material():
-	"""Generate sender (data sender) ECDH key material compatible with ABDM."""
-	private_key = x25519.X25519PrivateKey.generate()
-	public_key = private_key.public_key()
-	expiry = (datetime.utcnow() + timedelta(days=7)).isoformat() + "Z"
-
-	nonce = os.urandom(12)  # 96-bit nonce
-
-	key_material = {
-		"cryptoAlg": "ECDH",
-		"curve": "curve25519",
-		"dhPublicKey": {
-			"expiry": expiry,
-			"parameters": "Ephemeral public key",
-			"keyValue": base64.b64encode(
-				public_key.public_bytes(
-					encoding=serialization.Encoding.Raw,
-					format=serialization.PublicFormat.Raw
-				)
-			).decode()
-		},
-		"nonce": base64.b64encode(nonce).decode(),
-	}
-
-	return key_material, private_key, nonce
-
-
-def encrypt_fhir_resource(fhir_resource_json, receiver_key_material):
-	"""Encrypt the given FHIR resource JSON using ABDM ECDH + AES-GCM encryption."""
-
 	if isinstance(receiver_key_material, str):
 		receiver_key_material = json.loads(receiver_key_material)
 
-	# --- Receiver Public Key ---
-	receiver_pub_bytes = base64.b64decode(receiver_key_material["dhPublicKey"]["keyValue"])
-	receiver_pub_bytes = parse_receiver_pub_key(receiver_key_material)
-	print("\n\n\nreceiver_pub_bytes:\n", receiver_pub_bytes, len(receiver_pub_bytes))
-	receiver_public_key = x25519.X25519PublicKey.from_public_bytes(receiver_pub_bytes)
+	receiver_public_key = (
+		receiver_key_material.get("dhPublicKey").get("keyValue")
+		if receiver_key_material.get("dhPublicKey")
+		else ""
+	)
+	nonce = receiver_key_material.get("nonce")
 
-	# --- Sender Key Material ---
-	sender_key_material, sender_private_key, sender_nonce = generate_sender_key_material()
+	return encrypt_fhir_resource(bundle, receiver_public_key, nonce)
 
-	# --- Shared Secret ---
+
+def encrypt_fhir_resource(fhir_resource_json, receiver_public_key_b64, nonce_b64):
+	"""
+	Encrypt healthcare payload using:
+	- ECDH (X25519)
+	- HKDF (SHA256)
+	- AES-256-GCM
+	"""
+
+	# -------------------------------
+	# Decode inputs
+	# -------------------------------
+	decoded_key = base64.b64decode(receiver_public_key_b64)
+
+	if len(decoded_key) < 32:
+		frappe.throw("Invalid ABDM dhPublicKey received")
+
+	# ABDM embeds raw X25519 key in LAST 32 bytes
+	raw_x25519_key = decoded_key[-32:]
+
+	receiver_public_key = x25519.X25519PublicKey.from_public_bytes(raw_x25519_key)
+
+	# -------------------------------
+	# Decode nonce
+	# -------------------------------
+	nonce = base64.b64decode(nonce_b64)
+
+	# -------------------------------
+	# Generate sender ephemeral key pair
+	# -------------------------------
+	sender_private_key = x25519.X25519PrivateKey.generate()
+	sender_public_key = sender_private_key.public_key()
+
+	# -------------------------------
+	# Perform ECDH
+	# -------------------------------
 	shared_secret = sender_private_key.exchange(receiver_public_key)
 
-	# --- Derive AES Key (SHA256) ---
-	digest = hashes.Hash(hashes.SHA256())
-	digest.update(shared_secret)
-	aes_key = digest.finalize()
+	# -------------------------------
+	# Derive symmetric key
+	# -------------------------------
+	derived_key = HKDF(
+		algorithm=hashes.SHA256(), length=32, salt=None, info=b"healthcare-data-encryption"
+	).derive(shared_secret)
 
-	# --- Encrypt FHIR JSON ---
-	plaintext = json.dumps(fhir_resource_json).encode("utf-8")
-	aesgcm = AESGCM(aes_key)
-	ciphertext = aesgcm.encrypt(sender_nonce, plaintext, None)
+	# -------------------------------
+	# Encrypt payload
+	# -------------------------------
+	aesgcm = AESGCM(derived_key)
 
-	# --- Return ABDM Format ---
+	plaintext_bytes = json.dumps(fhir_resource_json).encode("utf-8")
+
+	ciphertext = aesgcm.encrypt(nonce=nonce, data=plaintext_bytes, associated_data=None)
+
+	# -------------------------------
+	# Export sender public key (raw)
+	# -------------------------------
+	sender_public_key_bytes = sender_public_key.public_bytes(
+		encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
+	)
+
+	# -------------------------------
+	# Return ABDM-compliant payload
+	# -------------------------------
 	return {
-		"encryptedData": base64.b64encode(ciphertext).decode(),
-		"keyMaterial": sender_key_material,
+		"ciphertext": base64.b64encode(ciphertext).decode(),
+		"senderPublicKey": base64.b64encode(sender_public_key_bytes).decode(),
+		"nonce": nonce_b64,
 	}
 
 
@@ -532,6 +401,135 @@ def parse_receiver_pub_key(key_material):
 		pub_bytes = pub_bytes[1:33]
 
 	if len(pub_bytes) != 32:
-		raise ValueError(f"Invalid X25519 key length after normalization: {len(pub_bytes)} bytes (expected 32)")
+		raise ValueError(
+			f"Invalid X25519 key length after normalization: {len(pub_bytes)} bytes (expected 32)"
+		)
 
 	return pub_bytes
+
+
+def make_composition(title, author_ref, subject_ref, section_entries, composition_type, encounter):
+	"""Create a FHIR Composition resource referencing other resources."""
+	composition_id = str(uuid.uuid4())  # frappe.generate_hash(length=64)
+
+	return {
+		"resourceType": "Composition",
+		"id": composition_id,
+		"status": "final",
+		"type": {
+			"coding": (composition_type if isinstance(composition_type, list) else [composition_type])
+		},
+		"title": title,
+		"encounter": encounter,
+		"date": f"{frappe.utils.now_datetime().isoformat(timespec='seconds')}Z",
+		"author": [{"reference": author_ref.get("reference"), "display": author_ref.get("display")}],
+		"subject": {
+			"reference": subject_ref.get("reference"),
+			"display": subject_ref.get("display"),
+		},
+		"section": section_entries,
+	}
+
+
+def send_dataflow_notify(
+	consent_id=None, transaction_id=None, sessionStatus="TRANSFERRED", hiStatus="OK"
+):
+	if not consent_id or not transaction_id:
+		frappe.throw("Missing Consent_id ID or Transaction ID")
+
+	try:
+		settings = get_abdm_settings()
+		if not settings or not settings.consent_base_url:
+			frappe.throw(
+				title="Configuration Missing",
+				msg="Consent Management Base URL not configured in ABDM Settings.",
+			)
+
+		auth_token = get_token_for_hiecm()
+		if not auth_token or not auth_token.get("accessToken"):
+			frappe.throw("Unable to fetch valid access token for HIE-CM.")
+
+		config = get_url("data_flow_on_notify")
+		url = settings.consent_base_url.rstrip("/") + config.get("url")
+
+		auth_prefix = "Bearer " if auth_token.get("tokenType", "").lower() == "bearer" else ""
+		authorization = auth_prefix + auth_token.get("accessToken")
+
+		headers = {
+			"Content-Type": "application/json",
+			"REQUEST-ID": generate_unique_id(),
+			"TIMESTAMP": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+			"X-CM-ID": settings.x_cm_id,
+			"Authorization": authorization,
+		}
+
+		payload = {
+			"notification": {
+				"consentId": consent_id,
+				"transactionId": transaction_id,
+				"doneAt": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+				"notifier": {"type": "HIP", "id": settings.get("facility_id")},
+				"statusNotification": {
+					"sessionStatus": sessionStatus,
+					"hipId": settings.get("facility_id"),
+					"statusResponses": [
+						{
+							"careContextReference": "b18d2e56-c5d2-41d0-bbe9-32a8b7579f74",
+							"hiStatus": hiStatus,
+							"description": "Care context Delivered"
+							if hiStatus == "OK"
+							else "Care context Failed to Deliver",
+						}
+					],
+				},
+			}
+		}
+
+		try:
+			request_and_post(
+				url=url,
+				payload=payload,
+				headers=headers,
+				method=config.get("method"),
+				request_name="Data Flow On-Notify Request",
+			)
+		except Exception as e:
+			frappe.log_error(
+				message=frappe.get_traceback(), title="Failed to Process ABDM Data Flow On-Notify Request"
+			)
+			raise e
+
+	except Exception as e:
+		frappe.log_error(
+			message=frappe.get_traceback(), title="Failed to Process ABDM Data Flow On-Notify Request"
+		)
+		raise e
+
+
+def make_bundle(resources, composition, identifier, bundle_type="transaction"):
+	"""Combine Composition + other resources into a transaction Bundle."""
+	bundle = {
+		"resourceType": "Bundle",
+		"type": bundle_type,
+		"id": frappe.generate_hash(length=64),
+		"identifier": identifier,
+		"timestamp": f"{frappe.utils.now_datetime().isoformat(timespec='seconds')}Z",
+		"entry": [],
+	}
+
+	# add composition first
+	bundle["entry"].append(make_resource_entry(composition))
+
+	# then add other resources
+	for resource in resources:
+		bundle["entry"].append(make_resource_entry(resource))
+
+	return bundle
+
+
+def make_resource_entry(resource):
+	"""Wrap a resource in a Bundle.entry structure."""
+	return {
+		"fullUrl": f"urn:uuid:{resource['id']}",
+		"resource": resource,
+	}
