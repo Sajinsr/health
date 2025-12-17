@@ -4,6 +4,7 @@
 import base64
 import hashlib
 import json
+import os
 import uuid
 from datetime import datetime
 
@@ -32,46 +33,36 @@ class ABDMConsent(Document):
 
 			entries, keyMaterial = self.build_entries()
 
-			payload = {
-				"pageNumber": 0,
-				"pageCount": 1,
-				"transactionId": self.transaction_id,
-				"entries": entries,
-				"keyMaterial": keyMaterial,
-			}
+			if entries and keyMaterial:
+				payload = {
+					"pageNumber": 0,
+					"pageCount": 1,
+					"transactionId": self.transaction_id,
+					"entries": entries,
+					"keyMaterial": keyMaterial,
+				}
 
-			frappe.log_error(message=payload, title="Data push-Payload")
+				frappe.log_error(message=payload, title="Data push-Payload")
 
-			response = request_and_post(
-				self.data_push_url,
-				payload,
-				headers,
-				"POST",
-				"Calling Data push URL",
-				frappe.db.exists("Patient", {"abha_address": self.abha_address}),
-			)
+				response = request_and_post(
+					self.data_push_url,
+					payload,
+					headers,
+					"POST",
+					"Calling Data push URL",
+					frappe.db.exists("Patient", {"abha_address": self.abha_address}),
+				)
 
-			sessionStatus = "FAILED"
-			hiStatus = "ERRORED"
+				sessionStatus = "FAILED"
+				hiStatus = "ERRORED"
 
-			if not response.get("traceback") and response in ["", None]:
-				sessionStatus = "TRANSFERRED"
-				hiStatus = "OK"
+				if not response.get("traceback") and response in ["", None]:
+					sessionStatus = "TRANSFERRED"
+					hiStatus = "OK"
 
-			send_dataflow_notify(self.consent_id, self.transaction_id, sessionStatus, hiStatus)
+				send_dataflow_notify(self.consent_id, self.transaction_id, sessionStatus, hiStatus)
 
 	def build_entries(self):
-		"""
-		[
-		        {
-		                "content": "Encrypted content of data packaged in FHIR bundle",
-		                "media": "application/fhir+json",
-		                "checksum": "string",
-		                "careContextReference": "1931-nd2"
-		        }
-		]
-		"""
-
 		entries = []
 		keyMaterial = {}
 		if self.care_contexts:
@@ -84,32 +75,19 @@ class ABDMConsent(Document):
 
 				if details:
 					bundle = get_bundle(details)
-					checksum = generate_checksum(bundle)
 					if bundle:
 						encypted_bundle = get_encrypted_bundle(bundle, self.key_material)
 						entries.append(
 							{
-								"content": encypted_bundle.get("ciphertext"),
+								"content": encypted_bundle.get("encryptedData"),
 								"media": "application/fhir+json",
-								"checksum": checksum,
+								"checksum": encypted_bundle.get("checksum"),
 								"careContextReference": item.get("careContextReference"),
 							}
 						)
-						keyMaterial = self.key_material
-						if isinstance(keyMaterial, str):
-							keyMaterial = json.loads(keyMaterial)
+						keyMaterial = encypted_bundle.get("keyMaterial")
 
-						keyMaterial["dhPublicKey"]["keyValue"] = encypted_bundle.get("senderPublicKey")
-						keyMaterial["nonce"] = encypted_bundle.get("nonce")
-
-		if entries:
-			return entries, keyMaterial
-
-
-def generate_checksum(bundle):
-	plaintext = json.dumps(bundle, separators=(",", ":")).encode("utf-8")
-	sha = hashlib.sha256(plaintext).digest()
-	return base64.b64encode(sha).decode()
+		return entries, keyMaterial
 
 
 def get_document_details(item, hi_types):
@@ -316,96 +294,157 @@ def get_encrypted_bundle(bundle, receiver_key_material):
 		if receiver_key_material.get("dhPublicKey")
 		else ""
 	)
+	expiry = (
+		receiver_key_material.get("dhPublicKey").get("expiry")
+		if receiver_key_material.get("dhPublicKey")
+		else ""
+	)
 	nonce = receiver_key_material.get("nonce")
 
-	return encrypt_fhir_resource(bundle, receiver_public_key, nonce)
+	return encrypt_fhir_bundle(
+		fhir_bundle=bundle, hiu_public_key_b64=receiver_public_key, hiu_nonce_b64=nonce, expiry=expiry
+	)
 
 
-def encrypt_fhir_resource(fhir_resource_json, receiver_public_key_b64, nonce_b64):
+def b64decode(data: str) -> bytes:
+	return base64.b64decode(data)
+
+
+def b64encode(data: bytes) -> str:
+	return base64.b64encode(data).decode()
+
+
+def xor_bytes(a: bytes, b: bytes) -> bytes:
+	return bytes(x ^ y for x, y in zip(a, b))
+
+
+def extract_x25519_public_key(raw_key: bytes) -> bytes:
 	"""
-	Encrypt healthcare payload using:
-	- ECDH (X25519)
-	- HKDF (SHA256)
-	- AES-256-GCM
+	ABDM sends uncompressed EC public key:
+	04 || X (32 bytes) || Y (32 bytes)
+
+	Curve25519 uses ONLY X
+	"""
+	if len(raw_key) == 65 and raw_key[0] == 0x04:
+		return raw_key[1:33]  # X coordinate
+	elif len(raw_key) == 32:
+		return raw_key
+	else:
+		raise ValueError("Invalid HIU public key format")
+
+
+def encrypt_fhir_bundle(
+	fhir_bundle: dict,
+	hiu_public_key_b64: str,
+	hiu_nonce_b64: str,
+	expiry: str,
+):
+	"""
+	ABDM HDCM HIP-side encryption
 	"""
 
-	# -------------------------------
-	# Decode inputs
-	# -------------------------------
-	decoded_key = base64.b64decode(receiver_public_key_b64)
+	# Decode HIU key material
+	hiu_public_key_raw_full = base64.b64decode(hiu_public_key_b64)
 
-	if len(decoded_key) < 32:
-		frappe.throw("Invalid ABDM dhPublicKey received")
+	hiu_public_key_raw = extract_x25519_public_key(hiu_public_key_raw_full)
+	hiu_nonce = b64decode(hiu_nonce_b64)
 
-	# ABDM embeds raw X25519 key in LAST 32 bytes
-	raw_x25519_key = decoded_key[-32:]
+	if len(hiu_public_key_raw) != 32:
+		raise ValueError("HIU public key must be 32 bytes (Curve25519)")
 
-	receiver_public_key = x25519.X25519PublicKey.from_public_bytes(raw_x25519_key)
+	if len(hiu_nonce) != 32:
+		raise ValueError("HIU nonce must be 32 bytes")
 
-	# -------------------------------
-	# Decode nonce
-	# -------------------------------
-	nonce = base64.b64decode(nonce_b64)
+	# Load HIU public key
+	hiu_public_key = x25519.X25519PublicKey.from_public_bytes(hiu_public_key_raw)
 
-	# -------------------------------
-	# Generate sender ephemeral key pair
-	# -------------------------------
-	sender_private_key = x25519.X25519PrivateKey.generate()
-	sender_public_key = sender_private_key.public_key()
+	# Generate HIP ephemeral key pair
+	hip_private_key = x25519.X25519PrivateKey.generate()
+	hip_public_key = hip_private_key.public_key()
 
-	# -------------------------------
-	# Perform ECDH
-	# -------------------------------
-	shared_secret = sender_private_key.exchange(receiver_public_key)
-
-	# -------------------------------
-	# Derive symmetric key
-	# -------------------------------
-	derived_key = HKDF(
-		algorithm=hashes.SHA256(), length=32, salt=None, info=b"healthcare-data-encryption"
-	).derive(shared_secret)
-
-	# -------------------------------
-	# Encrypt payload
-	# -------------------------------
-	aesgcm = AESGCM(derived_key)
-
-	plaintext_bytes = json.dumps(fhir_resource_json).encode("utf-8")
-
-	ciphertext = aesgcm.encrypt(nonce=nonce, data=plaintext_bytes, associated_data=None)
-
-	# -------------------------------
-	# Export sender public key (raw)
-	# -------------------------------
-	sender_public_key_bytes = sender_public_key.public_bytes(
+	# hip_public_key_der = hip_public_key.public_bytes(
+	# 	encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo
+	# )
+	raw_pub = hip_public_key.public_bytes(
 		encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
 	)
 
-	# -------------------------------
-	# Return ABDM-compliant payload
-	# -------------------------------
+	hip_public_key_der = wrap_x25519_public_key_as_ec_der(raw_pub)
+
+	# Generate HIP nonce
+	hip_nonce = os.urandom(32)
+
+	# Compute shared secret (ECDH)
+	shared_secret = hip_private_key.exchange(hiu_public_key)
+	# 32 bytes
+
+	# XOR nonces
+	nonce_xor = xor_bytes(hiu_nonce, hip_nonce)
+
+	# HKDF salt (first 20 bytes)
+	salt = nonce_xor[:20]
+
+	# Derive session key (256-bit)
+	hkdf = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=None)
+
+	session_key = hkdf.derive(shared_secret)
+
+	# AES-GCM IV (last 12 bytes)
+	iv = nonce_xor[-12:]
+
+	# Encrypt FHIR bundle
+	plaintext = json.dumps(fhir_bundle, separators=(",", ":")).encode("utf-8")
+
+	aesgcm = AESGCM(session_key)
+	ciphertext = aesgcm.encrypt(iv, plaintext, None)
+
+	keyValue = base64.b64encode(hip_public_key_der).decode()
+	decoded = base64.b64decode(keyValue)
+	frappe.log_error(
+		message={"length": len(decoded), "starts_with_30": decoded[0] == 0x30},
+		title="HIP Public Key DER Check",
+	)
+
+	# Prepare ABDM response
 	return {
-		"ciphertext": base64.b64encode(ciphertext).decode(),
-		"senderPublicKey": base64.b64encode(sender_public_key_bytes).decode(),
-		"nonce": nonce_b64,
+		"encryptedData": b64encode(ciphertext),
+		"keyMaterial": {
+			"cryptoAlg": "ECDH",
+			"curve": "curve25519",
+			"dhPublicKey": {
+				"expiry": expiry,
+				"parameters": "Ephemeral public key",
+				"keyValue": keyValue,
+			},
+			"nonce": b64encode(hip_nonce),
+		},
+		"checksum": base64.b64encode(hashlib.sha256(plaintext).digest()).decode(),
 	}
 
 
-def parse_receiver_pub_key(key_material):
-	key_value = key_material.get("dhPublicKey", {}).get("keyValue")
-	pub_bytes = base64.b64decode(key_value)
+def wrap_x25519_public_key_as_ec_der(raw_pub: bytes) -> bytes:
+	"""
+	Wrap raw 32-byte X25519 public key into EC SubjectPublicKeyInfo DER
+	ABDM Java compatible
+	"""
+	if len(raw_pub) != 32:
+		raise ValueError("X25519 public key must be 32 bytes")
 
-	# Handle ABDM's 65-byte uncompressed EC point format
-	if len(pub_bytes) == 65 and pub_bytes[0] == 0x04:
-		# Strip 0x04 prefix and take only X coordinate (next 32 bytes)
-		pub_bytes = pub_bytes[1:33]
+	# ASN.1 structure:
+	# SEQUENCE {
+	#   SEQUENCE {
+	#     OID id-ecPublicKey (1.2.840.10045.2.1)
+	#     OID curve25519 (1.3.101.110)
+	#   }
+	#   BIT STRING (public key)
+	# }
 
-	if len(pub_bytes) != 32:
-		raise ValueError(
-			f"Invalid X25519 key length after normalization: {len(pub_bytes)} bytes (expected 32)"
-		)
-
-	return pub_bytes
+	return (
+		b"\x30\x2a"  # SEQUENCE (42)
+		b"\x30\x05"  # SEQUENCE
+		b"\x06\x03\x2b\x65\x6e"  # OID 1.3.101.110 (X25519)
+		b"\x03\x21\x00" + raw_pub  # BIT STRING (33)
+	)
 
 
 def make_composition(title, author_ref, subject_ref, section_entries, composition_type, encounter):
