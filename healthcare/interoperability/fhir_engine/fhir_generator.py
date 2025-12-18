@@ -1,6 +1,7 @@
 # Copyright (c) 2025, earthians Health Informatics Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import re
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -11,25 +12,24 @@ from frappe.utils import cint, flt, get_datetime, getdate
 
 def generate_fhir_resource(map_doc, frappe_doc):
 	resource_type = (map_doc.resource_type or "").strip()
-	if not resource_type:
+	if not resource_type:  # resource type is mandatory
 		frappe.throw("FHIR Resource Map is missing resource_type")
 
 	resource = {"resourceType": resource_type}
 	resource.update(add_meta(map_doc))
 
-	cardinality_lookup = build_cardinality_lookup(map_doc)
-
 	errors = []
 	primitive_datatypes = get_primitive_datatypes()
+	cardinality_lookup = build_cardinality_lookup(map_doc)  # path: max
 	doctype_meta = frappe.get_meta(map_doc.frappe_doctype)
 
 	for element_map in map_doc.map or []:
 		fhir_path = (getattr(element_map, "fhir_path", None) or "").strip()
-		if not fhir_path:
+		if not fhir_path:  # no fhir path, no key in dict
 			continue
 
 		if fhir_path == resource_type:
-			continue
+			continue  # root
 
 		datatype = (getattr(element_map, "datatype", None) or "").strip()
 		min_cardinality = cint(getattr(element_map, "min", 0) or 0)
@@ -44,10 +44,6 @@ def generate_fhir_resource(map_doc, frappe_doc):
 		if is_child_table:
 			child_rows = getattr(frappe_doc, table_fieldname, None) or []
 
-			# if child_fieldname not given, default to FHIR leaf segment
-			if not child_fieldname:
-				child_fieldname = fhir_path.split(".")[-1]
-
 			has_any_value = False
 			for row_index, child_row in enumerate(child_rows):
 				raw_value = getattr(child_row, child_fieldname, None)
@@ -61,7 +57,7 @@ def generate_fhir_resource(map_doc, frappe_doc):
 				if datatype and not is_primitive:
 					value = build_complex_value(element_map, value)
 
-				set_fhir_element(
+				set_fhir_element(  # insert whole row
 					resource=resource,
 					element_map=element_map,
 					value=value,
@@ -70,7 +66,7 @@ def generate_fhir_resource(map_doc, frappe_doc):
 					group_index=row_index,
 				)
 
-			if not has_any_value and is_primitive and min_cardinality > 0:
+			if not has_any_value and is_primitive and min_cardinality > 0:  # no row inserted
 				errors.append(
 					_("Missing required value for path '{path}' (min={min}, map={map})").format(
 						path=fhir_path,
@@ -123,22 +119,26 @@ def generate_fhir_resource(map_doc, frappe_doc):
 	return resource
 
 
+# Strict-ish ISO patterns (good enough to avoid phone numbers)
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATETIME_RE = re.compile(
+	r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?([zZ]|[+\-]\d{2}:\d{2})?$"
+)
+ISO_TIME_RE = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?$")
+BOOL_STRINGS = {"true", "false", "t", "f", "y", "n", "1", "0"}
+
+
 def normalize_primitive_value(value):
 	"""
-	Normalize Python primitives into FHIR-friendly JSON values
+	Normalize Python primitives into FHIR-friendly JSON values.
+
+	Key rule: NEVER "guess" date/datetime from arbitrary numeric strings.
+	Only parse when the string matches an ISO-like pattern.
 	"""
 	if value is None:
 		return None
 
-	if isinstance(value, (datetime, date)):
-		return value.isoformat()
-
-	if isinstance(value, time):
-		return value.isoformat()
-
-	if isinstance(value, timedelta):
-		return value.total_seconds()
-
+	# bool must be before int/float because bool is a subclass of int in Python
 	if isinstance(value, bool):
 		return bool(value)
 
@@ -148,30 +148,44 @@ def normalize_primitive_value(value):
 	if isinstance(value, (int, float)):
 		return value
 
+	if isinstance(value, datetime):
+		return value.isoformat()
+
+	if isinstance(value, date):
+		return value.isoformat()
+
+	if isinstance(value, time):
+		return value.isoformat()
+
+	if isinstance(value, timedelta):
+		return value.total_seconds()
+
 	if isinstance(value, str):
 		text = value.strip()
 		if not text:
 			return value
 
 		lowered = text.lower()
-		if lowered in ("true", "false", "t", "f", "y", "n", "1", "0"):
-			return lowered in ["true", "t", "y", "1"]
+		if lowered in BOOL_STRINGS:
+			return lowered in {"true", "t", "y", "1"}
 
-		if not any(ch.isalpha() for ch in text):
-			try:
+		# Only parse if it REALLY looks like an ISO date/time/datetime
+		try:
+			if ISO_DATETIME_RE.match(text):
 				dt_val = get_datetime(text)
-				if dt_val:
-					return dt_val.isoformat()
-			except Exception:
-				pass
+				return dt_val.isoformat() if dt_val else value
 
-			try:
+			if ISO_DATE_RE.match(text):
 				date_val = getdate(text)
-				if date_val:
-					return date_val.isoformat()
-			except Exception:
-				pass
+				return date_val.isoformat() if date_val else value
 
+			if ISO_TIME_RE.match(text):
+				# leave as string, or parse to time if you want
+				return text
+		except Exception:
+			return value
+
+		# Anything else stays as-is (phone numbers, MRNs, codes, etc.)
 		return value
 
 	return value
@@ -186,10 +200,10 @@ def build_complex_value(element_map, value):
 	)
 	datatype_name = str(datatype_name).strip()
 	if not datatype_name:
-		return value # unknown datatype, raise?
+		return value  # unknown datatype, raise?
 
 	if isinstance(value, (dict, list)):
-		return value # already a complex type
+		return value  # already a complex type
 
 	text_value = str(value).strip()
 
