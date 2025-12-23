@@ -18,6 +18,7 @@ from frappe.model.document import Document
 from frappe.utils import format_datetime
 
 from healthcare.regional.india.abdm.abdm_config import get_url
+from healthcare.regional.india.abdm.abdm_encryption import encrypt_abdm_data, generate_key_material
 from healthcare.regional.india.abdm.utils import (
 	generate_unique_id,
 	get_abdm_settings,
@@ -306,31 +307,31 @@ def get_encrypted_bundle(bundle, receiver_key_material):
 	)
 
 
-def b64decode(data: str) -> bytes:
-	return base64.b64decode(data)
+# def b64decode(data: str) -> bytes:
+# 	return base64.b64decode(data)
 
 
-def b64encode(data: bytes) -> str:
-	return base64.b64encode(data).decode()
+# def b64encode(data: bytes) -> str:
+# 	return base64.b64encode(data).decode()
 
 
-def xor_bytes(a: bytes, b: bytes) -> bytes:
-	return bytes(x ^ y for x, y in zip(a, b))
+# def xor_bytes(a: bytes, b: bytes) -> bytes:
+# 	return bytes(x ^ y for x, y in zip(a, b))
 
 
-def extract_x25519_public_key(raw_key: bytes) -> bytes:
-	"""
-	ABDM sends uncompressed EC public key:
-	04 || X (32 bytes) || Y (32 bytes)
+# def extract_x25519_public_key(raw_key: bytes) -> bytes:
+# 	"""
+# 	ABDM sends uncompressed EC public key:
+# 	04 || X (32 bytes) || Y (32 bytes)
 
-	Curve25519 uses ONLY X
-	"""
-	if len(raw_key) == 65 and raw_key[0] == 0x04:
-		return raw_key[1:33]  # X coordinate
-	elif len(raw_key) == 32:
-		return raw_key
-	else:
-		raise ValueError("Invalid HIU public key format")
+# 	Curve25519 uses ONLY X
+# 	"""
+# 	if len(raw_key) == 65 and raw_key[0] == 0x04:
+# 		return raw_key[1:33]  # X coordinate
+# 	elif len(raw_key) == 32:
+# 		return raw_key
+# 	else:
+# 		raise ValueError("Invalid HIU public key format")
 
 
 def encrypt_fhir_bundle(
@@ -342,84 +343,113 @@ def encrypt_fhir_bundle(
 	"""
 	ABDM HDCM HIP-side encryption
 	"""
+	sender_key_material = generate_key_material()
 
-	# Decode HIU key material
-	hiu_public_key_raw_full = base64.b64decode(hiu_public_key_b64)
+	payload = {
+		"receiver_public_key": hiu_public_key_b64,
+		"receiver_nonce": hiu_nonce_b64,
+		"sender_private_key": sender_key_material.get("privateKey"),
+		"sender_public_key": sender_key_material.get("publicKey"),
+		"sender_nonce": sender_key_material.get("nonce"),
+		"plain_text_data": json.dumps(fhir_bundle)
+	}
 
-	hiu_public_key_raw = extract_x25519_public_key(hiu_public_key_raw_full)
-	hiu_nonce = b64decode(hiu_nonce_b64)
+	result = encrypt_abdm_data(payload)
 
-	if len(hiu_public_key_raw) != 32:
-		raise ValueError("HIU public key must be 32 bytes (Curve25519)")
-
-	if len(hiu_nonce) != 32:
-		raise ValueError("HIU nonce must be 32 bytes")
-
-	# Load HIU public key
-	hiu_public_key = x25519.X25519PublicKey.from_public_bytes(hiu_public_key_raw)
-
-	# Generate HIP ephemeral key pair
-	hip_private_key = x25519.X25519PrivateKey.generate()
-	hip_public_key = hip_private_key.public_key()
-
-	# hip_public_key_der = hip_public_key.public_bytes(
-	# 	encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo
-	# )
-	raw_pub = hip_public_key.public_bytes(
-		encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
-	)
-
-	hip_public_key_der = wrap_x25519_public_key_as_ec_der(raw_pub)
-
-	# Generate HIP nonce
-	hip_nonce = os.urandom(32)
-
-	# Compute shared secret (ECDH)
-	shared_secret = hip_private_key.exchange(hiu_public_key)
-	# 32 bytes
-
-	# XOR nonces
-	nonce_xor = xor_bytes(hiu_nonce, hip_nonce)
-
-	# HKDF salt (first 20 bytes)
-	salt = nonce_xor[:20]
-
-	# Derive session key (256-bit)
-	hkdf = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=None)
-
-	session_key = hkdf.derive(shared_secret)
-
-	# AES-GCM IV (last 12 bytes)
-	iv = nonce_xor[-12:]
-
-	# Encrypt FHIR bundle
 	plaintext = json.dumps(fhir_bundle, separators=(",", ":")).encode("utf-8")
 
-	aesgcm = AESGCM(session_key)
-	ciphertext = aesgcm.encrypt(iv, plaintext, None)
-
-	keyValue = base64.b64encode(hip_public_key_der).decode()
-	decoded = base64.b64decode(keyValue)
-	frappe.log_error(
-		message={"length": len(decoded), "starts_with_30": decoded[0] == 0x30},
-		title="HIP Public Key DER Check",
-	)
-
-	# Prepare ABDM response
 	return {
-		"encryptedData": b64encode(ciphertext),
+		"encryptedData": result.get("encryptedData"),
 		"keyMaterial": {
 			"cryptoAlg": "ECDH",
 			"curve": "curve25519",
 			"dhPublicKey": {
 				"expiry": expiry,
-				"parameters": "Ephemeral public key",
-				"keyValue": keyValue,
+				"parameters": "Curve25519/32byte random key",
+				"keyValue": result.get("keyToShare"),
 			},
-			"nonce": b64encode(hip_nonce),
+			"nonce": sender_key_material.get("nonce"),
 		},
 		"checksum": base64.b64encode(hashlib.sha256(plaintext).digest()).decode(),
 	}
+
+	# # Decode HIU key material
+	# hiu_public_key_raw_full = base64.b64decode(hiu_public_key_b64)
+
+	# hiu_public_key_raw = extract_x25519_public_key(hiu_public_key_raw_full)
+	# hiu_nonce = b64decode(hiu_nonce_b64)
+
+	# if len(hiu_public_key_raw) != 32:
+	# 	raise ValueError("HIU public key must be 32 bytes (Curve25519)")
+
+	# if len(hiu_nonce) != 32:
+	# 	raise ValueError("HIU nonce must be 32 bytes")
+
+	# # Load HIU public key
+	# hiu_public_key = x25519.X25519PublicKey.from_public_bytes(hiu_public_key_raw)
+
+	# # Generate HIP ephemeral key pair
+	# hip_private_key = x25519.X25519PrivateKey.generate()
+	# hip_public_key = hip_private_key.public_key()
+
+	# # hip_public_key_der = hip_public_key.public_bytes(
+	# # 	encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo
+	# # )
+	# raw_pub = hip_public_key.public_bytes(
+	# 	encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
+	# )
+
+	# hip_public_key_der = wrap_x25519_public_key_as_ec_der(raw_pub)
+
+	# # Generate HIP nonce
+	# hip_nonce = os.urandom(32)
+
+	# # Compute shared secret (ECDH)
+	# shared_secret = hip_private_key.exchange(hiu_public_key)
+	# # 32 bytes
+
+	# # XOR nonces
+	# nonce_xor = xor_bytes(hiu_nonce, hip_nonce)
+
+	# # HKDF salt (first 20 bytes)
+	# salt = nonce_xor[:20]
+
+	# # Derive session key (256-bit)
+	# hkdf = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=None)
+
+	# session_key = hkdf.derive(shared_secret)
+
+	# # AES-GCM IV (last 12 bytes)
+	# iv = nonce_xor[-12:]
+
+	# # Encrypt FHIR bundle
+	# plaintext = json.dumps(fhir_bundle, separators=(",", ":")).encode("utf-8")
+
+	# aesgcm = AESGCM(session_key)
+	# ciphertext = aesgcm.encrypt(iv, plaintext, None)
+
+	# keyValue = base64.b64encode(hip_public_key_der).decode()
+	# decoded = base64.b64decode(keyValue)
+	# frappe.log_error(
+	# 	message={"length": len(decoded), "starts_with_30": decoded[0] == 0x30},
+	# 	title="HIP Public Key DER Check",
+	# )
+
+	# # Prepare ABDM response
+	# return {
+	# 	"encryptedData": b64encode(ciphertext),
+	# 	"keyMaterial": {
+	# 		"cryptoAlg": "ECDH",
+	# 		"curve": "curve25519",
+	# 		"dhPublicKey": {
+	# 			"expiry": expiry,
+	# 			"parameters": "Ephemeral public key",
+	# 			"keyValue": keyValue,
+	# 		},
+	# 		"nonce": b64encode(hip_nonce),
+	# 	},
+	# 	"checksum": base64.b64encode(hashlib.sha256(plaintext).digest()).decode(),
+	# }
 
 
 def wrap_x25519_public_key_as_ec_der(raw_pub: bytes) -> bytes:
