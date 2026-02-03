@@ -98,6 +98,33 @@ class PractitionerAvailability(Document):
 					if has_time_overlap(r):
 						has_overlap_with_available = True
 						break
+
+				# check the practitioner schedule for available slots
+				schedules = frappe.db.get_all(
+					"Practitioner Service Unit Schedule",
+					filters={
+						"parent": self.scope,
+						"parentfield": "practitioner_schedules",
+						"parenttype": "Healthcare Practitioner",
+					},
+					pluck="schedule",
+				)
+
+				if schedules and len(schedules):
+					for schedule in schedules:
+						if frappe.db.exists(
+							"Healthcare Schedule Time Slot",
+							{
+								"parent": schedule,
+								"parentfield": "time_slots",
+								"parenttype": "Practitioner Schedule",
+								"from_time": ["<", get_time(self.end_time)],
+								"to_time": [">", get_time(self.start_time)],
+							},
+						):
+							has_overlap_with_available = True
+							break
+
 				if not has_overlap_with_available:
 					frappe.throw(
 						_(
