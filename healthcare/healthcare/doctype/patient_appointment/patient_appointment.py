@@ -14,6 +14,7 @@ from frappe.utils import (
 	add_to_date,
 	flt,
 	format_date,
+	format_time,
 	get_datetime,
 	get_link_to_form,
 	get_time,
@@ -713,6 +714,31 @@ def get_availability_data(date, practitioner, appointment):
 	if isinstance(appointment, str):
 		appointment = frappe.get_doc(json.loads(appointment))
 
+	service_units = [s.service_unit for s in practitioner_doc.practitioner_schedules if s.service_unit]
+	unavailabilities = get_practitioner_unavailability(
+		date, practitioner, practitioner_doc.department, service_units
+	)
+
+	unavailability_text = None
+	if unavailabilities:
+		# Process unavailabilities to show them in descriptions
+		global_unavailabilities = [
+			u for u in unavailabilities if u.scope in [practitioner, practitioner_doc.department]
+		]
+		if global_unavailabilities:
+			sorted_avail = sorted(global_unavailabilities, key=lambda x: x.appointment_time)
+
+			merged = []
+			for slot in sorted_avail:
+				if merged and slot.appointment_time <= merged[-1][1]:
+					# Overlaps or consecutive - extend the last slot
+					merged[-1] = (merged[-1][0], max(merged[-1][1], slot.appointment_endtime))
+				else:
+					merged.append((slot.appointment_time, slot.appointment_endtime))
+
+			txt = [f"{format_time(start, 'HH:mm')} - {format_time(end, 'HH:mm')}" for start, end in merged]
+			unavailability_text = ", ".join(txt)
+
 	if frappe.db.exists(
 		"Practitioner Availability",
 		{
@@ -724,11 +750,13 @@ def get_availability_data(date, practitioner, appointment):
 			"docstatus": 1,
 		},
 	):
-		available_slotes = get_availability_slots(practitioner_doc, date, appointment.appointment_type)
+		available_slotes = get_availability_slots(
+			practitioner_doc, date, appointment.appointment_type, unavailabilities
+		)
 
 	slot_details = []
 	if practitioner_doc.practitioner_schedules:
-		slot_details = get_available_slots(practitioner_doc, date)
+		slot_details = get_available_slots(practitioner_doc, date, unavailabilities)
 	elif not len(available_slotes):
 		frappe.throw(
 			_(
@@ -764,7 +792,11 @@ def get_availability_data(date, practitioner, appointment):
 	if appointment.invoiced:
 		fee_validity = "Disabled"
 
-	return {"slot_details": slot_details, "fee_validity": fee_validity}
+	return {
+		"slot_details": slot_details,
+		"fee_validity": fee_validity,
+		"unavailability_text": unavailability_text,
+	}
 
 
 def check_employee_wise_availability(date, practitioner_doc):
@@ -801,7 +833,7 @@ def check_employee_wise_availability(date, practitioner_doc):
 					)
 
 
-def get_available_slots(practitioner_doc, date):
+def get_available_slots(practitioner_doc, date, unavailabilities=None):
 	available_slots = slot_details = []
 	weekday = date.strftime("%A")
 	practitioner = practitioner_doc.name
@@ -850,9 +882,14 @@ def get_available_slots(practitioner_doc, date):
 					fields=["name", "appointment_time", "duration", "status", "appointment_date"],
 				)
 
-				practitioner_availability = get_practitioner_unavailability(
-					date, practitioner, practitioner_doc.department, schedule_entry.service_unit
-				)
+				practitioner_availability = []
+				if unavailabilities:
+					practitioner_availability = [
+						u
+						for u in unavailabilities
+						if u.scope in [practitioner, practitioner_doc.department, schedule_entry.service_unit]
+					]
+
 				appointments.extend(
 					practitioner_availability
 				)  # consider practitioner_availability as booked appointments
@@ -871,7 +908,7 @@ def get_available_slots(practitioner_doc, date):
 	return slot_details
 
 
-def get_availability_slots(practitioner_doc, date, appointment_type):
+def get_availability_slots(practitioner_doc, date, appointment_type, unavailabilities=None):
 	availability_details = frappe.db.get_all(
 		"Practitioner Availability",
 		filters={
@@ -890,14 +927,16 @@ def get_availability_slots(practitioner_doc, date, appointment_type):
 
 	available_slotes = []
 	for availability in availability_details:
-		data = build_availability_data(availability, appointment_type, date, practitioner_doc)
+		data = build_availability_data(
+			availability, appointment_type, date, practitioner_doc, unavailabilities
+		)
 		if data:
 			available_slotes.append(data)
 
 	return available_slotes
 
 
-def build_availability_data(availability, appointment_type, date, practitioner_doc):
+def build_availability_data(availability, appointment_type, date, practitioner_doc, unavailabilities=None):
 	available_slots = []
 
 	appointment_duration = frappe.db.get_value("Appointment Type", appointment_type, "default_duration")
@@ -944,11 +983,13 @@ def build_availability_data(availability, appointment_type, date, practitioner_d
 		fields=["name", "appointment_time", "duration", "status", "appointment_date"],
 	)
 
-	practitioner_availability = get_practitioner_unavailability(
-		date,
-		practitioner_doc.name,
-		practitioner_doc.department,
-	)
+	practitioner_availability = []
+	if unavailabilities:
+		practitioner_availability = [
+			u
+			for u in unavailabilities
+			if u.scope in [practitioner_doc.name, practitioner_doc.department, availability_doc.service_unit]
+		]
 	appointments.extend(practitioner_availability)
 
 	return (
@@ -968,7 +1009,17 @@ def build_availability_data(availability, appointment_type, date, practitioner_d
 
 
 def get_practitioner_unavailability(date, practitioner=None, department=None, service_unit=None):
-	scopes = (practitioner, department, service_unit)
+	scopes = []
+	if practitioner:
+		scopes.append(practitioner)
+	if department:
+		scopes.append(department)
+	if service_unit:
+		if isinstance(service_unit, list):
+			scopes.extend(service_unit)
+		else:
+			scopes.append(service_unit)
+
 	date = getdate(date)
 
 	return frappe.get_all(
@@ -977,8 +1028,10 @@ def get_practitioner_unavailability(date, practitioner=None, department=None, se
 			"name",
 			"start_date as appointment_date",
 			"start_time as appointment_time",
+			"end_time as appointment_endtime",
 			"duration",
 			"type",
+			"scope",
 		],
 		filters={
 			"type": "Unavailable",

@@ -932,6 +932,7 @@ let check_and_set_availability = function (frm) {
 							data.slot_details,
 							data.fee_validity,
 							d.get_value("appointment_date"),
+							data.unavailability_text,
 						);
 
 						$wrapper
@@ -1006,7 +1007,12 @@ let check_and_set_availability = function (frm) {
 		}
 	}
 
-	function get_slots(slot_details, fee_validity, appointment_date) {
+	function get_slots(
+		slot_details,
+		fee_validity,
+		appointment_date,
+		practitioner_unavailability_text,
+	) {
 		let slot_html = "";
 		let appointment_count = 0;
 		let unavailable = false;
@@ -1098,8 +1104,22 @@ let check_and_set_availability = function (frm) {
 
 							// to get apointment count for all day appointments
 							if (slot.maximum_appointments) {
-								if (booked.appointment_date == appointment_date) {
-									appointment_count++;
+								let overlap_start = moment.max(
+									slot_start_time,
+									booked_moment,
+								);
+								let overlap_end = moment.min(slot_end_time, end_time);
+								let overlap_duration = overlap_end.diff(
+									overlap_start,
+									"minutes",
+								);
+
+								if (
+									overlap_duration > 0 &&
+									booked.appointment_date == appointment_date
+								) {
+									appointment_count +=
+										overlap_duration / (frm.doc.duration || 1);
 								}
 							}
 
@@ -1185,31 +1205,33 @@ let check_and_set_availability = function (frm) {
 							available_slots > 0 ? "badge-success" : "badge-danger"
 						}`;
 						return `<button class="btn btn-secondary" data-name=${start_str}
-						data-service-unit="${slot_info.service_unit || ""}"
-						data-day-appointment=${1}
-						data-duration=${slot.duration}
-						${disabled ? `disabled="disabled"` : ""}>${slot.from_time} -
-						${slot.to_time} ${
-							slot.maximum_appointments
-								? `<br><span class="badge ${count_class}">${count} </span>`
-								: ""
-						}</button>`;
+							data-service-unit="${slot_info.service_unit || ""}"
+							data-day-appointment=${1}
+							data-duration=${slot.duration}
+							${disabled ? `disabled="disabled"` : ""}>${slot.from_time} -
+							${slot.to_time} ${
+								slot.maximum_appointments
+									? `<br><span class="badge ${count_class}">${count} </span>`
+									: ""
+							}</button>
+						`;
 					} else {
 						return `
-					<button class="btn btn-secondary" data-name=${start_str}
-						data-duration=${interval}
-						data-service-unit="${slot_info.service_unit || ""}"
-						data-tele-conf="${slot_info.tele_conf || 0}"
-						data-overlap-appointments="${slot_info.service_unit_capacity || 0}"
-						style="margin: 0 10px 10px 0; width: auto;" ${disabled ? `disabled="disabled"` : ""}
-						data-toggle="tooltip" title="${tool_tip || ""}">
-						${start_str.substring(0, start_str.length - 3)}
-						${
-							slot_info.service_unit_capacity
-								? `<br><span class="badge ${count_class}"> ${count} </span>`
-								: ""
-						}
-					</button>`;
+							<button class="btn btn-secondary" data-name=${start_str}
+								data-duration=${interval}
+								data-service-unit="${slot_info.service_unit || ""}"
+								data-tele-conf="${slot_info.tele_conf || 0}"
+								data-overlap-appointments="${slot_info.service_unit_capacity || 0}"
+								style="margin: 0 10px 10px 0; width: auto;" ${disabled ? `disabled="disabled"` : ""}
+								data-toggle="tooltip" title="${tool_tip || ""}">
+								${start_str.substring(0, start_str.length - 3)}
+								${
+									slot_info.service_unit_capacity
+										? `<br><span class="badge ${count_class}"> ${count} </span>`
+										: ""
+								}
+							</button>
+						`;
 					}
 				})
 				.join("");
@@ -1221,6 +1243,15 @@ let check_and_set_availability = function (frm) {
 			}
 			slot_html += `<br/><br/>`;
 		});
+
+		if (practitioner_unavailability_text) {
+			slot_html += `
+				<span style="color:red">
+				${__(
+					"Practitioner will not be available on",
+				)} <b>${practitioner_unavailability_text}</b>
+				</span><br>`;
+		}
 
 		return slot_html;
 	}
