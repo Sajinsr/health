@@ -64,6 +64,7 @@
    "label": "Client Secret"
   },
   {
+   "description": "Sandbox Server URL - https://dev.abdm.gov.in,\nProduction Server URL\n - https://apis.abdm.gov.in",
    "fieldname": "auth_base_url",
    "fieldtype": "Data",
    "label": "Base URL"
@@ -88,6 +89,7 @@
    "label": "Health ID Service"
   },
   {
+   "description": "Sandbox Server URL - https://abhasbx.abdm.gov.in,\nProduction Server URL\n - https://dev.abdm.gov.in",
    "fieldname": "health_id_base_url",
    "fieldtype": "Data",
    "label": "Base URL"
@@ -98,6 +100,7 @@
    "label": "Consent Management"
   },
   {
+   "description": "Sandbox: https://dev.abdm.gov.in, Production: https://apis.abdm.gov.in ",
    "fieldname": "consent_base_url",
    "fieldtype": "Data",
    "label": "Base URL"
@@ -120,6 +123,7 @@
    "label": "Patient Consent Template"
   },
   {
+   "description": "Sandbox: sbx, Production: abdm",
    "fieldname": "x_cm_id",
    "fieldtype": "Data",
    "label": "X-CM-ID"
@@ -139,6 +143,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "URL:  https://apihspsbx.abdm.gov.in/v4/int",
    "fieldname": "facility_base_url",
    "fieldtype": "Data",
    "label": "Facility Base URL"
@@ -184,7 +189,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-25 09:36:41.074180",
+ "modified": "2026-06-21 20:51:24.623037",
  "modified_by": "Administrator",
  "module": "Healthcare",
  "name": "ABDM Settings",
@@ -200,6 +205,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Healthcare Administrator",
    "share": 1,
    "write": 1
   }
